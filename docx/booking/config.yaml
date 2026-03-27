@@ -1,0 +1,5 @@
+package: booking
+output: ../../internal/adapter/booking/bookingserver/booking_server.gen.go
+generate:
+  std-http-server: true
+  models: true

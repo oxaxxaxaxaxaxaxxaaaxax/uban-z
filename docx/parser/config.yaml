@@ -1,0 +1,5 @@
+package: parser
+output: ../../internal/adapter/parser/parserserver/parser_server.gen.go
+generate:
+  std-http-server: true
+  models: true

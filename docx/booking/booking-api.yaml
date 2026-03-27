@@ -1,0 +1,124 @@
+openapi: 3.1.0
+info:
+  title: Booking Service API
+  version: 1.0.0
+  description: API для управления аудиториями и бронированиями
+
+paths:
+
+  /rooms:
+    get:
+      summary: Получить список аудиторий
+      responses:
+        '200':
+          description: Список аудиторий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+
+  /rooms/{id}:
+    get:
+      summary: Получить расписание аудитории
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Расписание аудитории
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleItem'
+
+  /booking:
+    post:
+      summary: Создать бронирование
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '200':
+          description: Бронирование создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+
+  /booking/{id}:
+    delete:
+      summary: Отменить бронирование
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Бронирование отменено
+
+components:
+  schemas:
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        capacity:
+          type: integer
+        building:
+          type: string
+
+    ScheduleItem:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        type:
+          type: string
+
+    CreateBookingRequest:
+      type: object
+      properties:
+        room_id:
+          type: integer
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+      required:
+        - room_id
+        - start_time
+        - end_time
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        room_id:
+          type: integer
+        start_time:
+          type: string
+        end_time:
+          type: string

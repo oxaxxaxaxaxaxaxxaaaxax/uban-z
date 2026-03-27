@@ -1,0 +1,53 @@
+openapi: 3.1.0
+info:
+  title: Parser Service API
+  version: 1.0.0
+  description: API для парсинга и обновления расписания НГУ
+
+paths:
+
+  /parser/run:
+    post:
+      summary: Запустить парсинг расписания
+      description: |
+        Проверяет обновление расписания на сайте НГУ.
+        При наличии изменений — обновляет данные в базе.
+      responses:
+        '200':
+          description: Результат выполнения парсинга
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParserRunResponse'
+
+        '500':
+          description: Ошибка выполнения парсинга
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+
+    ParserRunResponse:
+      type: object
+      properties:
+        updated:
+          type: boolean
+          description: Были ли применены изменения
+        message:
+          type: string
+          description: Результат выполнения
+      required:
+        - updated
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Описание ошибки
+      required:
+        - error
