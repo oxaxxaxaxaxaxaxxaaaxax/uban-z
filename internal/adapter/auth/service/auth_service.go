@@ -9,11 +9,15 @@ import (
 )
 
 type AuthService struct {
-	repo repository.UserRepository
+	repo       repository.UserRepository
+	jwtManager *authutils.JWTManager
 }
 
-func NewAuthService(r repository.UserRepository) *AuthService {
-	return &AuthService{repo: r}
+func NewAuthService(r repository.UserRepository, jwt *authutils.JWTManager) *AuthService {
+	return &AuthService{
+		repo:       r,
+		jwtManager: jwt,
+	}
 }
 
 func (s *AuthService) Register(login, password, role string) (*domain.User, error) {
@@ -41,5 +45,5 @@ func (s *AuthService) Login(login, password string) (string, error) {
 		return "", errors.New("invalid credentials")
 	}
 
-	return authutils.GenerateJWT(user.ID, user.Login, user.Role)
+	return s.jwtManager.Generate(user.ID, user.Login, user.Role)
 }
