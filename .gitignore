@@ -1,1 +1,76 @@
+
+# Binaries
+
+/bin/
+/build/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+
+*.test
+*.out
+*.cover
+coverage.out
+
+# Dependency directories (if vendored)
+
+vendor/
+
+# Go workspace file
+
+go.work
+go.work.sum
+
+# IDEs and editors
+
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+*.log
+
+# Environment variables
+
 .env
+.env.local
+.env.*.local
+
+# Temporary files
+
+tmp/
+temp/
+
+# Test cache
+
+.cache/
+
+# Profiling
+
+*.prof
+
+# Generated files (optional — если используешь генерацию)
+
+# *.gen.go
+
+# Docker
+
+*.tar
+
+# Local config files
+
+config.local.yaml
+config.local.json
