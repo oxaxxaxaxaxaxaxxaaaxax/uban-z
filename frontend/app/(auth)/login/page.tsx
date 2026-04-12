@@ -1,5 +1,6 @@
 'use client' 
-import React, { useState } from "react";
+
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from 'next/navigation';
 
@@ -25,7 +26,8 @@ interface LoginFormInputs {
 
 export default function LoginPage() {
     const router = useRouter();
-    const [showPassword, setShowPassword] = useState(false)
+    const [showPassword, setShowPassword] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
 
     const {register, handleSubmit, formState: { errors, isValid, isSubmitting, isDirty }, setError} = 
     useForm<LoginFormInputs>({
@@ -36,10 +38,14 @@ export default function LoginPage() {
         },
     })
 
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);    
+
     const isButtonDisabled = (isDirty && !isValid) || isSubmitting
 
     const onSubmit = async (data: LoginFormInputs) => {
-        // replace: fetch to API Gateway 
+        // replace: fetch to API Gateway - login
         const result = await mockLogin(data.username, data.password);
 
         if (!result.success) {
@@ -73,15 +79,17 @@ export default function LoginPage() {
                     {errors.root && (
                         <Alert
                             severity="error"
-                            classes={{ root: styles.alert }}
+                            className={styles.alert}
                         >
                             {errors.root.message}
                         </Alert>
                     )}
 
-                    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+                    <form onSubmit={handleSubmit(onSubmit)}
+                        noValidate
+                        suppressHydrationWarning>
                         <TextField
-                            classes={{ root: styles.field }}
+                            className={styles.field}
                             variant="standard"
                             label="Username"
                             error={Boolean(errors.username?.message)}
@@ -96,7 +104,7 @@ export default function LoginPage() {
                             fullWidth
                         />
 
-                        <TextField classes={{ root: styles.field }}
+                        <TextField className={styles.field}
                             variant="standard"
                             label="Password"
                             type={showPassword ? 'text' : 'password'}
@@ -127,7 +135,7 @@ export default function LoginPage() {
                             }}
                         />
 
-                        <Button classes={{ root: styles.submitButton }}
+                        <Button className={styles.submitButton}
                             type="submit"
                             variant="contained"
                             size="large"

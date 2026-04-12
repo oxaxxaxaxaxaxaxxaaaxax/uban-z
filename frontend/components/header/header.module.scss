@@ -1,0 +1,59 @@
+.root {
+    background-color: #fff;
+    padding: 12px 0;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.logo {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.logoImage {
+    height: 55px;
+    width: auto;
+    object-fit: contain;
+}
+
+.userName {
+    font-weight: 600;
+    color: #333;
+    margin-right: 16px;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.buttons {
+    display: flex;
+    align-items: center;
+
+    a {
+        text-decoration: none;
+    }
+}
+
+.logoutButton {
+    background-color: #24c038d0 !important;
+    color: #000000 !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    border-radius: 4px !important;
+    text-transform: none !important;
+    padding: 8px 20px !important;
+    min-width: auto !important;
+
+    &:hover {
+        background-color: #24c038d0 !important;
+    }
+}
