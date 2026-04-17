@@ -1,0 +1,100 @@
+package service
+
+import (
+	"context"
+	"time"
+
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/booking/domain"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/booking/port"
+)
+
+// CreateBookingInput contains data required to create a booking.
+type CreateBookingInput struct {
+	RoomID    int
+	StartTime time.Time
+	EndTime   time.Time
+}
+
+// UseCase exposes booking operations for inbound adapters.
+type UseCase interface {
+	ListRooms(ctx context.Context) ([]domain.Room, error)
+	GetRoomSchedule(ctx context.Context, roomID int) ([]domain.ScheduleItem, error)
+	CreateBooking(ctx context.Context, input CreateBookingInput) (domain.Booking, error)
+	CancelBooking(ctx context.Context, bookingID int) error
+}
+
+// Service implements booking use cases.
+type Service struct {
+	roomRepository    port.RoomRepository
+	bookingRepository port.BookingRepository
+}
+
+func New(roomRepository port.RoomRepository, bookingRepository port.BookingRepository) *Service {
+	return &Service{
+		roomRepository:    roomRepository,
+		bookingRepository: bookingRepository,
+	}
+}
+
+func (s *Service) ListRooms(ctx context.Context) ([]domain.Room, error) {
+	return s.roomRepository.List(ctx)
+}
+
+func (s *Service) GetRoomSchedule(ctx context.Context, roomID int) ([]domain.ScheduleItem, error) {
+	if _, err := s.roomRepository.GetByID(ctx, roomID); err != nil {
+		return nil, err
+	}
+
+	bookings, err := s.bookingRepository.ListByRoomID(ctx, roomID)
+	if err != nil {
+		return nil, err
+	}
+
+	schedule := make([]domain.ScheduleItem, 0, len(bookings))
+	for _, booking := range bookings {
+		schedule = append(schedule, domain.ScheduleItem{
+			StartTime: booking.StartTime,
+			EndTime:   booking.EndTime,
+			Type:      "booking",
+		})
+	}
+
+	return schedule, nil
+}
+
+func (s *Service) CreateBooking(ctx context.Context, input CreateBookingInput) (domain.Booking, error) {
+	if err := domain.ValidateTimeRange(input.StartTime, input.EndTime); err != nil {
+		return domain.Booking{}, err
+	}
+
+	if _, err := s.roomRepository.GetByID(ctx, input.RoomID); err != nil {
+		return domain.Booking{}, err
+	}
+
+	existingBookings, err := s.bookingRepository.ListByRoomID(ctx, input.RoomID)
+	if err != nil {
+		return domain.Booking{}, err
+	}
+
+	for _, existingBooking := range existingBookings {
+		if overlaps(input.StartTime, input.EndTime, existingBooking.StartTime, existingBooking.EndTime) {
+			return domain.Booking{}, domain.ErrScheduleConflict
+		}
+	}
+
+	booking := domain.Booking{
+		RoomID:    input.RoomID,
+		StartTime: input.StartTime,
+		EndTime:   input.EndTime,
+	}
+
+	return s.bookingRepository.Create(ctx, booking)
+}
+
+func (s *Service) CancelBooking(ctx context.Context, bookingID int) error {
+	return s.bookingRepository.DeleteByID(ctx, bookingID)
+}
+
+func overlaps(startA, endA, startB, endB time.Time) bool {
+	return startA.Before(endB) && startB.Before(endA)
+}
