@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	auth "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/authserver"
-	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/service"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/service"
 )
 
 type AuthHandler struct {

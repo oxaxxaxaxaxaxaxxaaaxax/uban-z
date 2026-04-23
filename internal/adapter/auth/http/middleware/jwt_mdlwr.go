@@ -1,25 +1,20 @@
-package authutils
+package middleware
 
 import (
 	"context"
 	"net/http"
 	"strings"
+
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/ports"
 )
 
 type contextKey string
 
 const UserContextKey contextKey = "user"
 
-func JWTMiddleware(jwtManager *JWTManager) func(http.Handler) http.Handler {
+func JWTMiddleware(manager ports.TokenManager) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-			// пропускаем публичные endpoints
-			if r.URL.Path == "/auth/login" || r.URL.Path == "/auth/register" {
-				next.ServeHTTP(w, r)
-				return
-			}
 
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
@@ -27,21 +22,19 @@ func JWTMiddleware(jwtManager *JWTManager) func(http.Handler) http.Handler {
 				return
 			}
 
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2 {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) != 2 || parts[0] != "Bearer" {
 				http.Error(w, "invalid token format", http.StatusUnauthorized)
 				return
 			}
 
-			tokenStr := parts[1]
-
-			token, err := jwtManager.Verify(tokenStr)
-			if err != nil || !token.Valid {
+			claims, err := manager.Verify(parts[1])
+			if err != nil {
 				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserContextKey, token.Claims)
+			ctx := context.WithValue(r.Context(), UserContextKey, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
