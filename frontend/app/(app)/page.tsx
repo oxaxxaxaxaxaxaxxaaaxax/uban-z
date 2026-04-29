@@ -1,7 +1,12 @@
 import Header from '@/components/header';
+import { DASHBOARD_CARDS } from '@/lib/cards-config';
+import Card from '@/components/card';
+
 import { mockGetMe } from '@/lib/testData';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+
+import styles from './page.module.scss'
 
 export default async function MainPage() {
     const cookieStore = await cookies();
@@ -17,11 +22,21 @@ export default async function MainPage() {
     }
 
     return (
-        <>
-            <Header fullName={user.fullName} />
-            <main>
-                <h1>Это главная страница. Доступна только после авторизации!</h1>
-            </main> 
-        </>
+        <main className={styles.container}>
+            <div className={styles.content}>
+                <Header fullName={user.fullName}/>
+
+                <div className={styles.grid}>
+                    {DASHBOARD_CARDS.map((card) => (
+                        <Card
+                            key={card.href}
+                            title={card.title}
+                            icon={card.icon}
+                            href={card.href}
+                        />
+                    ))}
+                </div>
+            </div>
+        </main>
     );
 }

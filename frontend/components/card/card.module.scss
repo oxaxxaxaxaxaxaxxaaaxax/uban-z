@@ -1,0 +1,50 @@
+.cardLink {
+    text-decoration: none;
+    display: block;
+    height: 100%;
+}
+
+.card {
+    padding: 24px 20px;
+    border-radius: 12px;
+    transition: all 0.25s ease;
+    cursor: pointer;
+    text-align: center;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #d4f3d7 !important;
+
+    &:hover {
+        background-color: #9ceba3;
+        transform: scale(1.03);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    &:active {
+        transform: scale(1.01);
+    }
+}
+
+.cardIcon {
+    position: relative;
+    width: 90px;
+    height: 90px;
+}
+
+.iconImage {
+    object-fit: contain !important;
+    border-radius: 8px !important;
+}
+
+.cardTitle {
+    font-weight: 700 !important;
+    color: #000000 !important;
+    margin-bottom: 8px !important;
+    font-size: 17px !important;
+
+    border-bottom: 2px solid #000000;
+    padding-bottom: 4px;
+    display: inline-block;
+}

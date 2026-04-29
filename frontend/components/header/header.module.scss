@@ -1,8 +1,8 @@
 .root {
     background-color: #fff;
     padding: 12px 0;
-    border-bottom: 1px solid #e0e0e0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    border-bottom: 1px #e0e0e0;
+    box-shadow: 0 2px 4px #0000000a;
 }
 
 .inner {
@@ -44,7 +44,7 @@
 }
 
 .logoutButton {
-    background-color: #24c038d0 !important;
+    background-color: #72C81F !important;
     color: #000000 !important;
     font-size: 15px !important;
     font-weight: 600 !important;
@@ -54,6 +54,6 @@
     min-width: auto !important;
 
     &:hover {
-        background-color: #24c038d0 !important;
+        background-color: #72C81F !important;
     }
 }

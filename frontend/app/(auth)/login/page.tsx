@@ -1,6 +1,6 @@
 'use client' 
 
-import React, { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from 'next/navigation';
 
@@ -27,7 +27,6 @@ interface LoginFormInputs {
 export default function LoginPage() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
-    const [isMounted, setIsMounted] = useState(false);
 
     const {register, handleSubmit, formState: { errors, isValid, isSubmitting, isDirty }, setError} = 
     useForm<LoginFormInputs>({
@@ -37,10 +36,6 @@ export default function LoginPage() {
             password: '',
         },
     })
-
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);    
 
     const isButtonDisabled = (isDirty && !isValid) || isSubmitting
 
