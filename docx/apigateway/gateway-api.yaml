@@ -87,13 +87,3 @@ paths:
           description: Бронирование не найдено
         '500':
           description: Внутренняя ошибка сервера
-
-  # PARSER SERVICE
-  /parser/run:
-    post:
-      summary: Proxy to Parser Service
-      responses:
-        '200':
-          description: Результат выполнения парсинга
-        '500':
-          description: Ошибка выполнения парсинга
