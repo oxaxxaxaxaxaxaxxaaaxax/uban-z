@@ -23,6 +23,8 @@ paths:
                 $ref: '#/components/schemas/UserResponse'
         '400':
           description: Некорректные данные
+        '500':
+          description: Внутренняя ошибка сервера
 
   /auth/login:
     post:
@@ -42,6 +44,8 @@ paths:
                 $ref: '#/components/schemas/LoginResponse'
         '401':
           description: Неверный login или пароль
+        '500':
+          description: Внутренняя ошибка сервера
 
 components:
   schemas:

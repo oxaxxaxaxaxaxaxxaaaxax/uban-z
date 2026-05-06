@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: API Gateway
+  version: 1.0.0
+  description: Reverse proxy для маршрутизации запросов к сервисам
+
+paths:
+
+  # AUTH SERVICE
+  /auth/register:
+    post:
+      summary: Proxy to Auth Service
+      responses:
+        '200':
+          description: Пользователь создан
+        '400':
+          description: Некорректные данные
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /auth/login:
+    post:
+      summary: Proxy to Auth Service
+      responses:
+        '200':
+          description: Успешная авторизация
+        '401':
+          description: Неверный login или пароль
+        '500':
+          description: Внутренняя ошибка сервера
+
+  # BOOKING SERVICE
+  /rooms:
+    get:
+      summary: Proxy to Booking Service
+      responses:
+        '200':
+          description: Список аудиторий
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /rooms/{id}:
+    get:
+      summary: Proxy to Booking Service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Расписание аудитории
+        '404':
+          description: Аудитория не найдена
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /booking:
+    post:
+      summary: Proxy to Booking Service
+      responses:
+        '200':
+          description: Бронирование создано
+        '400':
+          description: Некорректные данные запроса
+        '404':
+          description: Аудитория не найдена
+        '409':
+          description: Аудитория уже занята
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /booking/{id}:
+    delete:
+      summary: Proxy to Booking Service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Бронирование отменено
+        '404':
+          description: Бронирование не найдено
+        '500':
+          description: Внутренняя ошибка сервера
