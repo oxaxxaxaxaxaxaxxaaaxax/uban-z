@@ -4,23 +4,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Button from '@mui/material/Button';
 
-import { mockLogout } from '@/lib/testData';
+import { logout } from '@/lib/api/auth';
 
 import styles from './header.module.scss';
 
 interface HeaderProps {
-    fullName?: string;
+    fullname?: string;
 }
 
-export default function Header({ fullName }: HeaderProps) {
+export default function Header({ fullname }: HeaderProps) {
     const router = useRouter();
 
     const handleLogout = () => {
         if (window.confirm('Вы уверены, что хотите выйти?')) {
-            // replace: fetch to API Gateway - logout
-            mockLogout();
+            logout();
             router.push('/login');
-            router.refresh();
         }
     };
 
@@ -36,7 +34,7 @@ export default function Header({ fullName }: HeaderProps) {
                 </Link>
 
                 <div className={styles.buttons}>
-                    <span className={styles.userName}>{fullName}</span>
+                    <span className={styles.userName}>{fullname}</span>
                     <Button
                         className={styles.logoutButton}
                         onClick={handleLogout}

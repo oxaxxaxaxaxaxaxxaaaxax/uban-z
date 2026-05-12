@@ -29,8 +29,8 @@
 .userName {
     font-weight: 600;
     color: #333;
-    margin-right: 16px;
-    font-size: 15px;
+    margin-right: 15px;
+    font-size: 17px;
     white-space: nowrap;
 }
 
@@ -48,12 +48,12 @@
     color: #000000 !important;
     font-size: 15px !important;
     font-weight: 600 !important;
+    padding: 8px 20px !important;
     border-radius: 4px !important;
     text-transform: none !important;
-    padding: 8px 20px !important;
     min-width: auto !important;
 
     &:hover {
-        background-color: #72C81F !important;
+        background-color: #5da81a !important;
     }
 }

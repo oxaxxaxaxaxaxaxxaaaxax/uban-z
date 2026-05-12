@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "gen:auth": "openapi-typescript ../docx/auth/auth-api.yaml -o types/auth.ts",
+    "gen:booking": "openapi-typescript ../docx/booking/booking-api.yaml -o types/booking.ts",
+    "gen:parser": "openapi-typescript ../docx/parser/parser-api.yaml -o types/parser.ts",
+    "gen:api": "npm run gen:auth && npm run gen:booking && npm run gen:parser",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -26,6 +30,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "openapi-fetch": "^0.17.0",
+    "openapi-typescript": "^7.13.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

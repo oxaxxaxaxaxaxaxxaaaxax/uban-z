@@ -1,0 +1,135 @@
+.container {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 1100px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.title {
+    font-weight: 600 !important;
+    color: #1a1a1a !important;
+    font-size: 1.4rem !important;
+}
+
+.empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #888;
+    font-style: italic;
+    font-size: 0.95rem;
+    background: #fafafa;
+    border-radius: 8px;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.scheduleTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 600px;
+}
+
+.timeHeader,
+.dayHeader {
+    background: #72C81F;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 12px 8px;
+    text-align: center;
+    border: 1px solid #5da81a;
+}
+
+.timeHeader {
+    min-width: 80px;
+    position: sticky;
+    left: 0;
+    background: #72C81F;
+    z-index: 10;
+}
+
+.dayHeader {
+    min-width: 140px;
+}
+
+.timeCell {
+    background: #f5f5f5;
+    font-weight: 600;
+    color: #333;
+    padding: 10px 8px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+
+.cell {
+    padding: 8px;
+    border: 1px solid #e0e0e0;
+    vertical-align: top;
+    min-height: 80px;
+    transition: background 0.2s;
+}
+
+.emptyCell {
+    color: #ccc;
+    text-align: center;
+    display: block;
+    line-height: 60px;
+}
+
+.lecture {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border-left: 3px solid #72C81F;
+}
+
+.seminar {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-left: 3px solid #2196f3;
+}
+
+.lab {
+    background: linear-gradient(135deg, #fcece4 0%, #f8c4bb 100%);
+    border-left: 3px solid #f06829;
+}
+
+.cellContent {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cellType {
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    color: #1a1a1a !important;
+    line-height: 1.2 !important;
+}
+
+.cellTeacher {
+    font-size: 0.85rem !important;
+    color: #353434 !important;
+    font-style: italic;
+}
+
+.cellGroups {
+    font-size: 0.8rem !important;
+    color: #5f5f5f !important;
+    margin-top: 4px;
+}
+

@@ -21,9 +21,10 @@ export default function ActionCard({title, icon, href}: CardProps) {
                 <Box className={styles.cardIcon}>
                     <Image
                         src={icon}
-                        alt=""
+                        alt={title}
                         fill
-                        sizes="100x" 
+                        sizes="100px" 
+                        priority={false}
                         className={styles.iconImage}
                         aria-hidden="true" 
                     /> 

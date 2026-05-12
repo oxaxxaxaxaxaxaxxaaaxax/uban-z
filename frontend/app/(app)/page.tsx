@@ -2,7 +2,7 @@ import Header from '@/components/header';
 import { DASHBOARD_CARDS } from '@/lib/cards-config';
 import Card from '@/components/card';
 
-import { mockGetMe } from '@/lib/testData';
+import { getMe } from '@/lib/api/auth';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -16,7 +16,7 @@ export default async function MainPage() {
         redirect(`/login`);
     }
 
-    const user = await mockGetMe(token);
+    const user = await getMe(token);
     if (!user) {
         redirect(`/login`);
     }
@@ -24,7 +24,7 @@ export default async function MainPage() {
     return (
         <main className={styles.container}>
             <div className={styles.content}>
-                <Header fullName={user.fullName}/>
+                <Header fullname={user.fullname}/>
 
                 <div className={styles.grid}>
                     {DASHBOARD_CARDS.map((card) => (

@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 const publicRoutes = ['/login'];
 
-const STATIC_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.svg', '.gif', '.ico']
+const STATIC_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.svg', '.gif', '.ico', '.json']
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
