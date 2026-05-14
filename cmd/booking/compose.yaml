@@ -1,0 +1,87 @@
+# Booking-service standalone development stack.
+#
+# This is a booking-only slice — not the canonical project deployment.
+# The repo-wide deploy/ folder is collective infrastructure and is owned
+# by the team. Use this file when you only need to iterate on
+# booking-service locally without coordinating with other contributors.
+#
+# Usage:
+#   docker compose -f cmd/booking/compose.yaml up --build
+#
+# Endpoints (host):
+#   - booking HTTP API  → http://localhost:8080
+#   - rabbitmq mgmt UI  → http://localhost:15672 (guest / guest)
+#   - postgres          → localhost:5432 (booking / booking)
+
+name: uban-z-booking
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: booking
+      POSTGRES_DB: booking
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking -d booking"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  migrate:
+    image: ghcr.io/kukymbr/goose-docker:latest
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: "host=postgres port=5432 user=booking password=booking dbname=booking sslmode=disable"
+      GOOSE_MIGRATION_DIR: /migrations
+    volumes:
+      - ../../migrations/booking:/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  booking:
+    build:
+      context: ../..
+      dockerfile: cmd/booking/Dockerfile
+    image: uban-z/booking:dev
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://booking:booking@postgres:5432/booking?sslmode=disable"
+      LOG_LEVEL: info
+      SHUTDOWN_TIMEOUT: 5s
+      EVENTS_ENABLED: "true"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_EXCHANGE: booking.events
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
