@@ -12,10 +12,11 @@ func TestConfig_Validate(t *testing.T) {
 	t.Parallel()
 
 	base := config.Config{
-		Port:            "8080",
-		DatabaseURL:     "postgres://x",
-		LogLevel:        "info",
-		ShutdownTimeout: 5 * time.Second,
+		Port:             "8080",
+		DatabaseURL:      "postgres://x",
+		LogLevel:         "info",
+		ShutdownTimeout:  5 * time.Second,
+		RabbitMQExchange: "booking.events",
 	}
 
 	cases := []struct {
@@ -38,6 +39,15 @@ func TestConfig_Validate(t *testing.T) {
 			name:      "zero shutdown timeout fails",
 			mutate:    func(c *config.Config) { c.ShutdownTimeout = 0 },
 			wantError: "SHUTDOWN_TIMEOUT",
+		},
+		{
+			name:   "events enabled with RABBITMQ_URL is valid",
+			mutate: func(c *config.Config) { c.EventsEnabled = true; c.RabbitMQURL = "amqp://localhost" },
+		},
+		{
+			name:      "events enabled without RABBITMQ_URL fails",
+			mutate:    func(c *config.Config) { c.EventsEnabled = true },
+			wantError: "RABBITMQ_URL",
 		},
 	}
 

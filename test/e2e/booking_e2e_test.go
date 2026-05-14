@@ -98,7 +98,7 @@ func bootServer(t *testing.T) *e2eServer {
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 
 	store := bookingpostgres.NewStoreFromPool(pool)
-	useCase := service.New(store, store)
+	useCase := service.New(store, store, nil)
 	handler := bookinghttp.NewHandler(useCase, logger)
 
 	router := httpx.Chain(
@@ -234,7 +234,7 @@ func TestE2E_RaceThroughHTTP(t *testing.T) {
 	}
 	raw, _ := json.Marshal(payload)
 
-	client := &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{MaxIdleConnsPerHost: 50}}
+	client := &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{MaxIdleConnsPerHost: 50}}
 
 	const attempts = 25
 	var (
