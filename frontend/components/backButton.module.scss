@@ -1,0 +1,17 @@
+.button {
+    background-color: #ffffff !important;
+    color: #71c81f !important;
+    border: 2px solid #a2e067 !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    padding: 5px 15px !important;
+    min-width: auto !important;
+    transition: all 0.2s ease-in-out !important;
+
+    &:hover {
+        background-color: #a2e067 !important;
+        color: #111510 !important;
+        border-color: #a2e067 !important;
+    }
+}
