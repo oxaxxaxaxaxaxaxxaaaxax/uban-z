@@ -40,7 +40,7 @@ func (s stubUseCase) CancelBooking(ctx context.Context, bookingID int) error {
 
 func newServer(t *testing.T, uc service.UseCase) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(bookingserver.Handler(bookinghttp.NewHandler(uc)))
+	srv := httptest.NewServer(bookingserver.Handler(bookinghttp.NewHandler(uc, nil)))
 	t.Cleanup(srv.Close)
 	return srv
 }
