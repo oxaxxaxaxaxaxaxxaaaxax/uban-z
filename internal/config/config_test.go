@@ -13,7 +13,7 @@ func TestConfig_Validate(t *testing.T) {
 
 	base := config.Config{
 		Port:            "8080",
-		Storage:         "memory",
+		DatabaseURL:     "postgres://x",
 		LogLevel:        "info",
 		ShutdownTimeout: 5 * time.Second,
 	}
@@ -23,20 +23,11 @@ func TestConfig_Validate(t *testing.T) {
 		mutate    func(*config.Config)
 		wantError string
 	}{
-		{name: "memory defaults are valid", mutate: func(*config.Config) {}},
+		{name: "valid config", mutate: func(*config.Config) {}},
 		{
-			name:   "postgres with DATABASE_URL is valid",
-			mutate: func(c *config.Config) { c.Storage = "postgres"; c.DatabaseURL = "postgres://x" },
-		},
-		{
-			name:      "postgres without DATABASE_URL fails",
-			mutate:    func(c *config.Config) { c.Storage = "postgres" },
+			name:      "missing DATABASE_URL fails",
+			mutate:    func(c *config.Config) { c.DatabaseURL = "" },
 			wantError: "DATABASE_URL",
-		},
-		{
-			name:      "unknown storage fails",
-			mutate:    func(c *config.Config) { c.Storage = "mongo" },
-			wantError: "unknown STORAGE",
 		},
 		{
 			name:      "unknown log level fails",
@@ -71,10 +62,9 @@ func TestConfig_Validate(t *testing.T) {
 
 func TestLoad_readsAndNormalisesEnv(t *testing.T) {
 	t.Setenv("PORT", "9090")
-	t.Setenv("STORAGE", "MEMORY")
 	t.Setenv("LOG_LEVEL", "DEBUG")
 	t.Setenv("SHUTDOWN_TIMEOUT", "10s")
-	t.Setenv("DATABASE_URL", "")
+	t.Setenv("DATABASE_URL", "postgres://x")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -82,9 +72,6 @@ func TestLoad_readsAndNormalisesEnv(t *testing.T) {
 	}
 	if cfg.Port != "9090" {
 		t.Fatalf("Port = %q, want 9090", cfg.Port)
-	}
-	if cfg.Storage != "memory" {
-		t.Fatalf("Storage = %q, want memory (lowercased)", cfg.Storage)
 	}
 	if cfg.LogLevel != "debug" {
 		t.Fatalf("LogLevel = %q, want debug (lowercased)", cfg.LogLevel)
@@ -94,8 +81,7 @@ func TestLoad_readsAndNormalisesEnv(t *testing.T) {
 	}
 }
 
-func TestLoad_failsOnInvalidEnv(t *testing.T) {
-	t.Setenv("STORAGE", "postgres")
+func TestLoad_failsWithoutDatabaseURL(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
 
 	_, err := config.Load()
