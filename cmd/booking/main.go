@@ -2,37 +2,50 @@ package main
 
 import (
 	"context"
-	"log"
+	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	bookingserver "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/bookingserver"
 	bookinghttp "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/http"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/inmemory"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/config"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/booking/service"
-)
-
-const (
-	defaultPort     = "8080"
-	shutdownTimeout = 5 * time.Second
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/platform/httpx"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/platform/logging"
 )
 
 func main() {
-	port := envOrDefault("PORT", defaultPort)
-	address := ":" + port
+	cfg, err := config.Load()
+	if err != nil {
+		slog.New(slog.NewJSONHandler(os.Stderr, nil)).Error("config load failed", slog.Any("err", err))
+		os.Exit(1)
+	}
+
+	logger, err := logging.New(cfg.LogLevel)
+	if err != nil {
+		slog.New(slog.NewJSONHandler(os.Stderr, nil)).Error("logger init failed", slog.Any("err", err))
+		os.Exit(1)
+	}
 
 	store := inmemory.NewStore()
 	useCase := service.New(store, store)
-	handler := bookinghttp.NewHandler(useCase)
-	router := bookingserver.Handler(handler)
+	handler := bookinghttp.NewHandler(useCase, logger)
+
+	router := httpx.Chain(
+		bookingserver.Handler(handler),
+		httpx.RequestID,
+		httpx.RecoverPanic(logger),
+		httpx.AccessLog(logger),
+	)
 
 	server := &http.Server{
-		Addr:              address,
+		Addr:              ":" + cfg.Port,
 		Handler:           router,
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: cfg.ShutdownTimeout,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -41,25 +54,21 @@ func main() {
 	go func() {
 		<-ctx.Done()
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer cancel()
 
 		if err := server.Shutdown(shutdownCtx); err != nil {
-			log.Printf("booking server shutdown failed: %v", err)
+			logger.Error("server shutdown failed", slog.Any("err", err))
 		}
 	}()
 
-	log.Printf("booking service listening on %s", address)
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("booking server failed: %v", err)
+	logger.Info("booking service starting",
+		slog.String("addr", server.Addr),
+		slog.String("storage", cfg.Storage),
+		slog.String("log_level", cfg.LogLevel),
+	)
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Error("server failed", slog.Any("err", err))
+		os.Exit(1)
 	}
-}
-
-func envOrDefault(key, fallback string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
-	}
-
-	return value
 }
