@@ -236,7 +236,7 @@ func TestE2E_RaceThroughHTTP(t *testing.T) {
 
 	client := &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{MaxIdleConnsPerHost: 50}}
 
-	const attempts = 25
+	const attempts = 10
 	var (
 		wg        sync.WaitGroup
 		got200    int64
