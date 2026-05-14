@@ -9,17 +9,14 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-const (
-	StorageMemory   = "memory"
-	StoragePostgres = "postgres"
-)
-
 type Config struct {
-	Port            string        `env:"PORT" env-default:"8080"`
-	Storage         string        `env:"STORAGE" env-default:"memory"`
-	DatabaseURL     string        `env:"DATABASE_URL"`
-	LogLevel        string        `env:"LOG_LEVEL" env-default:"info"`
-	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
+	Port             string        `env:"PORT" env-default:"8080"`
+	DatabaseURL      string        `env:"DATABASE_URL"`
+	LogLevel         string        `env:"LOG_LEVEL" env-default:"info"`
+	ShutdownTimeout  time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
+	EventsEnabled    bool          `env:"EVENTS_ENABLED" env-default:"false"`
+	RabbitMQURL      string        `env:"RABBITMQ_URL"`
+	RabbitMQExchange string        `env:"RABBITMQ_EXCHANGE" env-default:"booking.events"`
 }
 
 func Load() (Config, error) {
@@ -28,7 +25,6 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("read env: %w", err)
 	}
 
-	cfg.Storage = strings.ToLower(cfg.Storage)
 	cfg.LogLevel = strings.ToLower(cfg.LogLevel)
 
 	if err := cfg.Validate(); err != nil {
@@ -39,14 +35,8 @@ func Load() (Config, error) {
 }
 
 func (c Config) Validate() error {
-	switch c.Storage {
-	case StorageMemory:
-	case StoragePostgres:
-		if c.DatabaseURL == "" {
-			return errors.New("STORAGE=postgres requires DATABASE_URL")
-		}
-	default:
-		return fmt.Errorf("unknown STORAGE %q (expected memory|postgres)", c.Storage)
+	if c.DatabaseURL == "" {
+		return errors.New("DATABASE_URL is required")
 	}
 
 	switch c.LogLevel {
@@ -57,6 +47,10 @@ func (c Config) Validate() error {
 
 	if c.ShutdownTimeout <= 0 {
 		return errors.New("SHUTDOWN_TIMEOUT must be positive")
+	}
+
+	if c.EventsEnabled && c.RabbitMQURL == "" {
+		return errors.New("EVENTS_ENABLED=true requires RABBITMQ_URL")
 	}
 
 	return nil
