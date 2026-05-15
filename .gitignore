@@ -1,51 +1,5 @@
-
-# Binaries
-
-/bin/
-/build/
-/dist/
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Go build artifacts
-
-*.test
-*.out
-*.cover
-coverage.out
-
-# Dependency directories (if vendored)
-
-vendor/
-
-# Go workspace file
-
-go.work
-go.work.sum
-
-# IDEs and editors
-
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS files
-
-.DS_Store
-Thumbs.db
-
-# Logs
-
-*.log
-
-# Environment variables
-
 .env
+.kilo
 .env.local
 .env.*.local
 

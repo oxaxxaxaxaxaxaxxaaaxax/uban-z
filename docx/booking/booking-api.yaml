@@ -18,6 +18,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Room'
+        '500':
+          description: Внутренняя ошибка сервера
 
   /rooms/{id}:
     get:
@@ -37,6 +39,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ScheduleItem'
+        '404':
+          description: Аудитория не найдена
+        '500':
+          description: Внутренняя ошибка сервера
 
   /booking:
     post:
@@ -54,6 +60,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking'
+        '400':
+          description: Некорректные данные запроса
+        '404':
+          description: Аудитория не найдена
+        '409':
+          description: Аудитория уже занята
+        '500':
+          description: Внутренняя ошибка сервера
 
   /booking/{id}:
     delete:
@@ -67,6 +81,10 @@ paths:
       responses:
         '200':
           description: Бронирование отменено
+        '404':
+          description: Бронирование не найдено
+        '500':
+          description: Внутренняя ошибка сервера
 
 components:
   schemas:
