@@ -47,6 +47,8 @@ paths:
   /booking:
     post:
       summary: Создать бронирование
+      security:
+        - bearerAuth: [ ]
       requestBody:
         required: true
         content:
@@ -62,6 +64,8 @@ paths:
                 $ref: '#/components/schemas/Booking'
         '400':
           description: Некорректные данные запроса
+        '401':
+          description: Пользователь не авторизован
         '404':
           description: Аудитория не найдена
         '409':
@@ -72,6 +76,8 @@ paths:
   /booking/{id}:
     delete:
       summary: Отменить бронирование
+      security:
+        - bearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -81,12 +87,20 @@ paths:
       responses:
         '200':
           description: Бронирование отменено
+        '401':
+          description: Пользователь не авторизован
         '404':
           description: Бронирование не найдено
         '500':
           description: Внутренняя ошибка сервера
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
 
     Room:
