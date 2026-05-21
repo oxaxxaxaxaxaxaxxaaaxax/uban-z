@@ -8,15 +8,20 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	bookingserver "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/bookingserver"
 	bookinghttp "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/http"
-	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/inmemory"
+	bookingpostgres "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/postgres"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/config"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/booking/service"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/platform/httpx"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/platform/logging"
 )
+
+const dbConnectTimeout = 10 * time.Second
 
 func main() {
 	cfg, err := config.Load()
@@ -31,7 +36,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	store := inmemory.NewStore()
+	pool, err := openPostgres(cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("postgres connect failed", slog.Any("err", err))
+		os.Exit(1)
+	}
+	defer pool.Close()
+	logger.Info("connected to postgres")
+
+	store := bookingpostgres.NewStoreFromPool(pool)
 	useCase := service.New(store, store)
 	handler := bookinghttp.NewHandler(useCase, logger)
 
@@ -64,11 +77,25 @@ func main() {
 
 	logger.Info("booking service starting",
 		slog.String("addr", server.Addr),
-		slog.String("storage", cfg.Storage),
 		slog.String("log_level", cfg.LogLevel),
 	)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("server failed", slog.Any("err", err))
 		os.Exit(1)
 	}
+}
+
+func openPostgres(url string) (*pgxpool.Pool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbConnectTimeout)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	return pool, nil
 }
