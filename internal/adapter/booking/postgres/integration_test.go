@@ -73,9 +73,17 @@ func bootPostgres(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("close sql.DB: %v", err)
 	}
 
-	pool, err := pgxpool.New(ctx, dsn)
+	poolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		t.Fatalf("pgxpool.New: %v", err)
+		t.Fatalf("pgxpool.ParseConfig: %v", err)
+	}
+	// Default MaxConns is max(4, num_cpus). The parallel-inserts test fires
+	// 30 concurrent queries; with the default size most queue behind 4 slots
+	// and time out under heavier daemon load when the suite runs back-to-back.
+	poolCfg.MaxConns = 32
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		t.Fatalf("pgxpool.NewWithConfig: %v", err)
 	}
 	t.Cleanup(pool.Close)
 
@@ -122,9 +130,11 @@ func TestPostgresStore_CreateBooking_persistsAndConflicts(t *testing.T) {
 	base := time.Date(2026, time.September, 1, 9, 0, 0, 0, time.UTC)
 
 	created, err := store.Create(ctx, domain.Booking{
-		RoomID:    1,
-		StartTime: base,
-		EndTime:   base.Add(time.Hour),
+		RoomID:      1,
+		UserID:      1,
+		CreatorRole: domain.RoleStudentB,
+		StartTime:   base,
+		EndTime:     base.Add(time.Hour),
 	})
 	if err != nil {
 		t.Fatalf("first Create: %v", err)
@@ -135,9 +145,11 @@ func TestPostgresStore_CreateBooking_persistsAndConflicts(t *testing.T) {
 
 	// Overlap on same room must be rejected.
 	_, err = store.Create(ctx, domain.Booking{
-		RoomID:    1,
-		StartTime: base.Add(30 * time.Minute),
-		EndTime:   base.Add(90 * time.Minute),
+		RoomID:      1,
+		UserID:      2,
+		CreatorRole: domain.RoleStudentB,
+		StartTime:   base.Add(30 * time.Minute),
+		EndTime:     base.Add(90 * time.Minute),
 	})
 	if !errors.Is(err, domain.ErrScheduleConflict) {
 		t.Fatalf("overlap err = %v, want ErrScheduleConflict", err)
@@ -145,18 +157,22 @@ func TestPostgresStore_CreateBooking_persistsAndConflicts(t *testing.T) {
 
 	// Boundary-touch (existing ends at 10:00, new starts at 10:00) must succeed.
 	if _, err := store.Create(ctx, domain.Booking{
-		RoomID:    1,
-		StartTime: base.Add(time.Hour),
-		EndTime:   base.Add(2 * time.Hour),
+		RoomID:      1,
+		UserID:      1,
+		CreatorRole: domain.RoleStudentB,
+		StartTime:   base.Add(time.Hour),
+		EndTime:     base.Add(2 * time.Hour),
 	}); err != nil {
 		t.Fatalf("boundary Create: %v", err)
 	}
 
 	// Different room, same time must succeed.
 	if _, err := store.Create(ctx, domain.Booking{
-		RoomID:    2,
-		StartTime: base,
-		EndTime:   base.Add(time.Hour),
+		RoomID:      2,
+		UserID:      1,
+		CreatorRole: domain.RoleStudentB,
+		StartTime:   base,
+		EndTime:     base.Add(time.Hour),
 	}); err != nil {
 		t.Fatalf("other-room Create: %v", err)
 	}
@@ -168,9 +184,11 @@ func TestPostgresStore_CreateBooking_rejectsInvalidRange(t *testing.T) {
 
 	start := time.Date(2026, time.September, 1, 10, 0, 0, 0, time.UTC)
 	_, err := store.Create(context.Background(), domain.Booking{
-		RoomID:    1,
-		StartTime: start,
-		EndTime:   start.Add(-time.Hour),
+		RoomID:      1,
+		UserID:      1,
+		CreatorRole: domain.RoleStudentB,
+		StartTime:   start,
+		EndTime:     start.Add(-time.Hour),
 	})
 	if !errors.Is(err, domain.ErrInvalidTimeRange) {
 		t.Fatalf("err = %v, want ErrInvalidTimeRange", err)
@@ -184,9 +202,11 @@ func TestPostgresStore_DeleteByID(t *testing.T) {
 
 	start := time.Date(2026, time.October, 1, 12, 0, 0, 0, time.UTC)
 	created, err := store.Create(ctx, domain.Booking{
-		RoomID:    1,
-		StartTime: start,
-		EndTime:   start.Add(time.Hour),
+		RoomID:      1,
+		UserID:      1,
+		CreatorRole: domain.RoleStudentB,
+		StartTime:   start,
+		EndTime:     start.Add(time.Hour),
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
@@ -221,9 +241,11 @@ func TestPostgresStore_ParallelInserts_exactlyOneWins(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			_, err := store.Create(ctx, domain.Booking{
-				RoomID:    3,
-				StartTime: start,
-				EndTime:   end,
+				RoomID:      3,
+				UserID:      1,
+				CreatorRole: domain.RoleStudentB,
+				StartTime:   start,
+				EndTime:     end,
 			})
 			switch {
 			case err == nil:
