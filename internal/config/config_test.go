@@ -17,6 +17,7 @@ func TestConfig_Validate(t *testing.T) {
 		LogLevel:         "info",
 		ShutdownTimeout:  5 * time.Second,
 		RabbitMQExchange: "booking.events",
+		JWTSecret:        "test-secret",
 	}
 
 	cases := []struct {
@@ -49,6 +50,11 @@ func TestConfig_Validate(t *testing.T) {
 			mutate:    func(c *config.Config) { c.EventsEnabled = true },
 			wantError: "RABBITMQ_URL",
 		},
+		{
+			name:      "missing JWT_SECRET fails",
+			mutate:    func(c *config.Config) { c.JWTSecret = "" },
+			wantError: "JWT_SECRET",
+		},
 	}
 
 	for _, tc := range cases {
@@ -75,6 +81,7 @@ func TestLoad_readsAndNormalisesEnv(t *testing.T) {
 	t.Setenv("LOG_LEVEL", "DEBUG")
 	t.Setenv("SHUTDOWN_TIMEOUT", "10s")
 	t.Setenv("DATABASE_URL", "postgres://x")
+	t.Setenv("JWT_SECRET", "test")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -93,6 +100,7 @@ func TestLoad_readsAndNormalisesEnv(t *testing.T) {
 
 func TestLoad_failsWithoutDatabaseURL(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
+	t.Setenv("JWT_SECRET", "test")
 
 	_, err := config.Load()
 	if err == nil {
@@ -100,5 +108,18 @@ func TestLoad_failsWithoutDatabaseURL(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "DATABASE_URL") {
 		t.Fatalf("err = %q, want substring DATABASE_URL", err.Error())
+	}
+}
+
+func TestLoad_failsWithoutJWTSecret(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://x")
+	t.Setenv("JWT_SECRET", "")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("Load err = nil, want error about JWT_SECRET")
+	}
+	if !strings.Contains(err.Error(), "JWT_SECRET") {
+		t.Fatalf("err = %q, want substring JWT_SECRET", err.Error())
 	}
 }
