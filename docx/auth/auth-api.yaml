@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Auth Service API
   version: 1.0.0
-  description: API для аутентификации пользователей
+  description: API для аутентификации пользователей и управления профилями
 
 paths:
   /auth/register:
@@ -22,7 +22,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserResponse'
         '400':
-          description: Некорректные данные
+          description: Некорректные данные или неизвестная роль
+        '409':
+          description: Пользователь с таким login уже существует
         '500':
           description: Внутренняя ошибка сервера
 
@@ -47,8 +49,192 @@ paths:
         '500':
           description: Внутренняя ошибка сервера
 
+  /users:
+    get:
+      summary: Получить список пользователей
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список пользователей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Доступ разрешён только admin
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /users/me:
+    get:
+      summary: Получить текущего пользователя
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Текущий пользователь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: JWT не передан или недействителен
+        '404':
+          description: Пользователь из токена не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+    put:
+      summary: Обновить текущего пользователя
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeRequest'
+      responses:
+        '200':
+          description: Пользователь обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Некорректное тело запроса
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Передано поле role, которое можно менять только через admin endpoint
+        '404':
+          description: Пользователь из токена не найден
+        '409':
+          description: Новый login уже занят
+        '500':
+          description: Внутренняя ошибка сервера
+
+    delete:
+      summary: Удалить текущего пользователя
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Пользователь удалён
+        '401':
+          description: JWT не передан или недействителен
+        '404':
+          description: Пользователь из токена не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /users/{id}:
+    get:
+      summary: Получить пользователя по ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        '200':
+          description: Пользователь найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Некорректный id
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Доступ разрешён только admin
+        '404':
+          description: Пользователь не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+    put:
+      summary: Обновить пользователя по ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateUserRequest'
+      responses:
+        '200':
+          description: Пользователь обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Некорректное тело запроса, id или роль
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Доступ разрешён только admin
+        '404':
+          description: Пользователь не найден
+        '409':
+          description: Новый login уже занят
+        '500':
+          description: Внутренняя ошибка сервера
+
+    delete:
+      summary: Удалить пользователя по ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        '204':
+          description: Пользователь удалён
+        '400':
+          description: Некорректный id
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Доступ разрешён только admin
+        '404':
+          description: Пользователь не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
   schemas:
+    Role:
+      type: string
+      enum:
+        - student_b
+        - student_m
+        - student_a
+        - teacher
+        - admin
 
     RegisterRequest:
       type: object
@@ -58,7 +244,7 @@ components:
         password:
           type: string
         role:
-          type: string
+          $ref: '#/components/schemas/Role'
       required:
         - login
         - password
@@ -81,6 +267,24 @@ components:
         token:
           type: string
 
+    UpdateMeRequest:
+      type: object
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+
+    AdminUpdateUserRequest:
+      type: object
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+
     UserResponse:
       type: object
       properties:
@@ -88,3 +292,5 @@ components:
           type: integer
         login:
           type: string
+        role:
+          $ref: '#/components/schemas/Role'

@@ -20,19 +20,20 @@ func (h *AuthHandler) PostAuthRegister(w http.ResponseWriter, r *http.Request) {
 	var req auth.RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		writeStatusError(w, http.StatusBadRequest, "bad request")
 		return
 	}
 
 	user, err := h.service.Register(req.Login, req.Password, req.Role)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeUserError(w, err)
 		return
 	}
 
 	resp := auth.UserResponse{
 		Id:    &user.ID,
 		Login: &user.Login,
+		Role:  &user.Role,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -43,13 +44,13 @@ func (h *AuthHandler) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 	var req auth.LoginRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		writeStatusError(w, http.StatusBadRequest, "bad request")
 		return
 	}
 
 	token, err := h.service.Login(req.Login, req.Password)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		writeStatusError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 

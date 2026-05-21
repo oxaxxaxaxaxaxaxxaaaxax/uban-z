@@ -29,6 +29,145 @@ paths:
         '500':
           description: Внутренняя ошибка сервера
 
+  /users:
+    get:
+      summary: Proxy to Auth Service - list users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список пользователей
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Доступ разрешён только admin
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /users/me:
+    get:
+      summary: Proxy to Auth Service - get current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Текущий пользователь
+        '401':
+          description: JWT не передан или недействителен
+        '404':
+          description: Пользователь не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+    put:
+      summary: Proxy to Auth Service - update current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Пользователь обновлён
+        '400':
+          description: Некорректные данные запроса
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Поле role можно менять только через admin endpoint
+        '404':
+          description: Пользователь не найден
+        '409':
+          description: Новый login уже занят
+        '500':
+          description: Внутренняя ошибка сервера
+
+    delete:
+      summary: Proxy to Auth Service - delete current user
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Пользователь удалён
+        '401':
+          description: JWT не передан или недействителен
+        '404':
+          description: Пользователь не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /users/{id}:
+    get:
+      summary: Proxy to Auth Service - get user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Пользователь найден
+        '400':
+          description: Некорректный id
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Доступ разрешён только admin
+        '404':
+          description: Пользователь не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+    put:
+      summary: Proxy to Auth Service - update user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Пользователь обновлён
+        '400':
+          description: Некорректные данные запроса
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Доступ разрешён только admin
+        '404':
+          description: Пользователь не найден
+        '409':
+          description: Новый login уже занят
+        '500':
+          description: Внутренняя ошибка сервера
+
+    delete:
+      summary: Proxy to Auth Service - delete user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Пользователь удалён
+        '400':
+          description: Некорректный id
+        '401':
+          description: JWT не передан или недействителен
+        '403':
+          description: Доступ разрешён только admin
+        '404':
+          description: Пользователь не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
   # BOOKING SERVICE
   /rooms:
     get:
@@ -87,3 +226,10 @@ paths:
           description: Бронирование не найдено
         '500':
           description: Внутренняя ошибка сервера
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

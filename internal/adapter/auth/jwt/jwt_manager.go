@@ -53,9 +53,22 @@ func (j *JWTManager) Verify(tokenStr string) (*ports.Claims, error) {
 		return nil, fmt.Errorf("invalid claims type")
 	}
 
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("invalid user_id claim")
+	}
+	login, ok := claims["login"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid login claim")
+	}
+	role, ok := claims["role"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid role claim")
+	}
+
 	return &ports.Claims{
-		UserID: int(claims["user_id"].(float64)),
-		Login:  claims["login"].(string),
-		Role:   claims["role"].(string),
+		UserID: int(userID),
+		Login:  login,
+		Role:   role,
 	}, nil
 }

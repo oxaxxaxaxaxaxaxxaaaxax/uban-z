@@ -20,6 +20,10 @@ func NewAuthService(r ports2.UserRepository, jwt ports2.TokenManager) *AuthServi
 }
 
 func (s *AuthService) Register(login, password, role string) (*domain.User, error) {
+	if !domain.IsValidRole(role) {
+		return nil, domain.ErrInvalidRole
+	}
+
 	user := &domain.User{
 		Login:    login,
 		Password: password, // позже: hash
@@ -64,6 +68,9 @@ func (s *AuthService) UpdateUser(id int, login, password, role string) (*domain.
 		user.Password = password // позже: hash
 	}
 	if role != "" {
+		if !domain.IsValidRole(role) {
+			return nil, domain.ErrInvalidRole
+		}
 		user.Role = role
 	}
 
