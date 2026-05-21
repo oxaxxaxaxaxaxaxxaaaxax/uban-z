@@ -10,10 +10,13 @@ import (
 )
 
 type Config struct {
-	Port            string        `env:"PORT" env-default:"8080"`
-	DatabaseURL     string        `env:"DATABASE_URL"`
-	LogLevel        string        `env:"LOG_LEVEL" env-default:"info"`
-	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
+	Port             string        `env:"PORT" env-default:"8080"`
+	DatabaseURL      string        `env:"DATABASE_URL"`
+	LogLevel         string        `env:"LOG_LEVEL" env-default:"info"`
+	ShutdownTimeout  time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
+	EventsEnabled    bool          `env:"EVENTS_ENABLED" env-default:"false"`
+	RabbitMQURL      string        `env:"RABBITMQ_URL"`
+	RabbitMQExchange string        `env:"RABBITMQ_EXCHANGE" env-default:"booking.events"`
 }
 
 func Load() (Config, error) {
@@ -44,6 +47,10 @@ func (c Config) Validate() error {
 
 	if c.ShutdownTimeout <= 0 {
 		return errors.New("SHUTDOWN_TIMEOUT must be positive")
+	}
+
+	if c.EventsEnabled && c.RabbitMQURL == "" {
+		return errors.New("EVENTS_ENABLED=true requires RABBITMQ_URL")
 	}
 
 	return nil
