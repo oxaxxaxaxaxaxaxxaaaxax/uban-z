@@ -38,6 +38,21 @@ func (p *fakePublisher) Events() []port.Event {
 	return out
 }
 
+// defaultCaller is a baseline student_b who owns user_id=1 — used by tests that
+// don't exercise rank-based logic directly.
+func defaultCaller() service.Caller {
+	return service.Caller{UserID: 1, Login: "alice", Role: domain.RoleStudentB}
+}
+
+func defaultInput(roomID int, start, end time.Time) service.CreateBookingInput {
+	return service.CreateBookingInput{
+		Caller:    defaultCaller(),
+		RoomID:    roomID,
+		StartTime: start,
+		EndTime:   end,
+	}
+}
+
 type fakeRepo struct {
 	mu       sync.Mutex
 	rooms    map[int]domain.Room
@@ -251,11 +266,7 @@ func TestService_CreateBooking(t *testing.T) {
 		repo.rooms[1] = domain.Room{ID: 1}
 		svc := service.New(repo, repo, nil)
 
-		_, err := svc.CreateBooking(context.Background(), service.CreateBookingInput{
-			RoomID:    1,
-			StartTime: base,
-			EndTime:   base,
-		})
+		_, err := svc.CreateBooking(context.Background(), defaultInput(1, base, base))
 		if !errors.Is(err, domain.ErrInvalidTimeRange) {
 			t.Fatalf("err = %v, want ErrInvalidTimeRange", err)
 		}
@@ -270,11 +281,7 @@ func TestService_CreateBooking(t *testing.T) {
 		repo := newFakeRepo()
 		svc := service.New(repo, repo, nil)
 
-		_, err := svc.CreateBooking(context.Background(), service.CreateBookingInput{
-			RoomID:    99,
-			StartTime: base,
-			EndTime:   base.Add(time.Hour),
-		})
+		_, err := svc.CreateBooking(context.Background(), defaultInput(99, base, base.Add(time.Hour)))
 		if !errors.Is(err, domain.ErrRoomNotFound) {
 			t.Fatalf("err = %v, want ErrRoomNotFound", err)
 		}
@@ -293,11 +300,9 @@ func TestService_CreateBooking(t *testing.T) {
 		}
 		svc := service.New(repo, repo, nil)
 
-		_, err := svc.CreateBooking(context.Background(), service.CreateBookingInput{
-			RoomID:    1,
-			StartTime: base.Add(30 * time.Minute),
-			EndTime:   base.Add(90 * time.Minute),
-		})
+		_, err := svc.CreateBooking(context.Background(),
+			defaultInput(1, base.Add(30*time.Minute), base.Add(90*time.Minute)),
+		)
 		if !errors.Is(err, domain.ErrScheduleConflict) {
 			t.Fatalf("err = %v, want ErrScheduleConflict", err)
 		}
@@ -319,11 +324,9 @@ func TestService_CreateBooking(t *testing.T) {
 		}
 		svc := service.New(repo, repo, nil)
 
-		got, err := svc.CreateBooking(context.Background(), service.CreateBookingInput{
-			RoomID:    1,
-			StartTime: base.Add(time.Hour),
-			EndTime:   base.Add(2 * time.Hour),
-		})
+		got, err := svc.CreateBooking(context.Background(),
+			defaultInput(1, base.Add(time.Hour), base.Add(2*time.Hour)),
+		)
 		if err != nil {
 			t.Fatalf("unexpected err = %v", err)
 		}
@@ -339,11 +342,7 @@ func TestService_CreateBooking(t *testing.T) {
 		repo.rooms[1] = domain.Room{ID: 1}
 		svc := service.New(repo, repo, nil)
 
-		input := service.CreateBookingInput{
-			RoomID:    1,
-			StartTime: base,
-			EndTime:   base.Add(time.Hour),
-		}
+		input := defaultInput(1, base, base.Add(time.Hour))
 
 		got, err := svc.CreateBooking(context.Background(), input)
 		if err != nil {
@@ -351,6 +350,9 @@ func TestService_CreateBooking(t *testing.T) {
 		}
 		if got.RoomID != 1 || !got.StartTime.Equal(input.StartTime) || !got.EndTime.Equal(input.EndTime) {
 			t.Fatalf("unexpected booking returned: %+v", got)
+		}
+		if got.UserID != input.Caller.UserID || got.CreatorRole != input.Caller.Role {
+			t.Fatalf("caller fields not stamped onto booking: %+v", got)
 		}
 		if repo.createCalls != 1 {
 			t.Fatalf("Create called %d times, want 1", repo.createCalls)
@@ -367,24 +369,89 @@ func TestService_CancelBooking(t *testing.T) {
 		repo := newFakeRepo()
 		svc := service.New(repo, repo, nil)
 
-		err := svc.CancelBooking(context.Background(), 1)
+		err := svc.CancelBooking(context.Background(), 1, defaultCaller())
 		if !errors.Is(err, domain.ErrBookingNotFound) {
 			t.Fatalf("err = %v, want ErrBookingNotFound", err)
 		}
 	})
 
-	t.Run("deletes booking on success", func(t *testing.T) {
+	t.Run("self-cancel deletes booking", func(t *testing.T) {
 		t.Parallel()
 
 		repo := newFakeRepo()
-		repo.bookings[1] = domain.Booking{ID: 1, RoomID: 1}
+		repo.bookings[1] = domain.Booking{
+			ID:          1,
+			RoomID:      1,
+			UserID:      1,
+			CreatorRole: domain.RoleStudentB,
+		}
 		svc := service.New(repo, repo, nil)
 
-		if err := svc.CancelBooking(context.Background(), 1); err != nil {
+		if err := svc.CancelBooking(context.Background(), 1, defaultCaller()); err != nil {
 			t.Fatalf("err = %v", err)
 		}
 		if _, ok := repo.bookings[1]; ok {
 			t.Fatal("booking 1 still present after CancelBooking")
+		}
+	})
+
+	t.Run("ErrForbidden when caller is not owner and rank not higher", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[1] = domain.Booking{
+			ID:          1,
+			RoomID:      1,
+			UserID:      99,
+			CreatorRole: domain.RoleStudentB,
+		}
+		svc := service.New(repo, repo, nil)
+
+		err := svc.CancelBooking(context.Background(), 1, defaultCaller())
+		if !errors.Is(err, domain.ErrForbidden) {
+			t.Fatalf("err = %v, want ErrForbidden", err)
+		}
+		if _, ok := repo.bookings[1]; !ok {
+			t.Fatal("booking 1 was deleted despite forbidden")
+		}
+	})
+
+	t.Run("higher-rank caller can cancel lower-rank booking", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[1] = domain.Booking{
+			ID:          1,
+			RoomID:      1,
+			UserID:      99,
+			CreatorRole: domain.RoleStudentB,
+		}
+		svc := service.New(repo, repo, nil)
+		teacher := service.Caller{UserID: 7, Login: "prof", Role: domain.RoleTeacher}
+
+		if err := svc.CancelBooking(context.Background(), 1, teacher); err != nil {
+			t.Fatalf("err = %v", err)
+		}
+		if _, ok := repo.bookings[1]; ok {
+			t.Fatal("booking still present")
+		}
+	})
+
+	t.Run("admin overrides everyone", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[1] = domain.Booking{
+			ID:          1,
+			RoomID:      1,
+			UserID:      99,
+			CreatorRole: domain.RoleTeacher,
+		}
+		svc := service.New(repo, repo, nil)
+		admin := service.Caller{UserID: 100, Login: "root", Role: domain.RoleAdmin}
+
+		if err := svc.CancelBooking(context.Background(), 1, admin); err != nil {
+			t.Fatalf("err = %v", err)
 		}
 	})
 }
@@ -402,11 +469,7 @@ func TestService_PublishesEvents(t *testing.T) {
 		pub := &fakePublisher{}
 		svc := service.New(repo, repo, pub)
 
-		got, err := svc.CreateBooking(context.Background(), service.CreateBookingInput{
-			RoomID:    1,
-			StartTime: base,
-			EndTime:   base.Add(time.Hour),
-		})
+		got, err := svc.CreateBooking(context.Background(), defaultInput(1, base, base.Add(time.Hour)))
 		if err != nil {
 			t.Fatalf("err = %v", err)
 		}
@@ -421,6 +484,9 @@ func TestService_PublishesEvents(t *testing.T) {
 		}
 		if ev.BookingID != got.ID || ev.RoomID != got.RoomID {
 			t.Fatalf("event ids mismatch: %+v vs booking %+v", ev, got)
+		}
+		if ev.OwnerID != got.UserID || ev.OwnerRole != got.CreatorRole {
+			t.Fatalf("event owner mismatch: %+v vs %+v", ev, got)
 		}
 		if !ev.StartTime.Equal(got.StartTime) || !ev.EndTime.Equal(got.EndTime) {
 			t.Fatalf("event times mismatch: %+v vs %+v", ev, got)
@@ -439,11 +505,9 @@ func TestService_PublishesEvents(t *testing.T) {
 		pub := &fakePublisher{}
 		svc := service.New(repo, repo, pub)
 
-		_, err := svc.CreateBooking(context.Background(), service.CreateBookingInput{
-			RoomID:    1,
-			StartTime: base.Add(30 * time.Minute),
-			EndTime:   base.Add(90 * time.Minute),
-		})
+		_, err := svc.CreateBooking(context.Background(),
+			defaultInput(1, base.Add(30*time.Minute), base.Add(90*time.Minute)),
+		)
 		if !errors.Is(err, domain.ErrScheduleConflict) {
 			t.Fatalf("err = %v, want ErrScheduleConflict", err)
 		}
@@ -460,11 +524,7 @@ func TestService_PublishesEvents(t *testing.T) {
 		pub := &fakePublisher{errOn: port.EventBookingCreated, failWith: errors.New("broker down")}
 		svc := service.New(repo, repo, pub)
 
-		got, err := svc.CreateBooking(context.Background(), service.CreateBookingInput{
-			RoomID:    1,
-			StartTime: base,
-			EndTime:   base.Add(time.Hour),
-		})
+		got, err := svc.CreateBooking(context.Background(), defaultInput(1, base, base.Add(time.Hour)))
 		if err != nil {
 			t.Fatalf("CreateBooking err = %v, want success despite broker failure", err)
 		}
@@ -473,21 +533,70 @@ func TestService_PublishesEvents(t *testing.T) {
 		}
 	})
 
-	t.Run("CancelBooking publishes booking.cancelled on success", func(t *testing.T) {
+	t.Run("CancelBooking publishes booking.cancelled on self-cancel", func(t *testing.T) {
 		t.Parallel()
 
 		repo := newFakeRepo()
-		repo.bookings[7] = domain.Booking{ID: 7, RoomID: 2}
+		repo.bookings[7] = domain.Booking{
+			ID:          7,
+			RoomID:      2,
+			UserID:      1,
+			CreatorRole: domain.RoleStudentB,
+		}
 		pub := &fakePublisher{}
 		svc := service.New(repo, repo, pub)
 
-		if err := svc.CancelBooking(context.Background(), 7); err != nil {
+		if err := svc.CancelBooking(context.Background(), 7, defaultCaller()); err != nil {
 			t.Fatalf("err = %v", err)
 		}
 
 		events := pub.Events()
-		if len(events) != 1 || events[0].Type != port.EventBookingCancelled || events[0].BookingID != 7 {
-			t.Fatalf("unexpected events: %+v", events)
+		if len(events) != 1 {
+			t.Fatalf("events = %d, want 1", len(events))
+		}
+		ev := events[0]
+		if ev.Type != port.EventBookingCancelled || ev.BookingID != 7 {
+			t.Fatalf("unexpected event: %+v", ev)
+		}
+		if !ev.SelfCancel {
+			t.Error("expected SelfCancel=true for owner cancelling own booking")
+		}
+		if ev.CancelledBy == nil || ev.CancelledBy.UserID != 1 {
+			t.Errorf("CancelledBy = %+v", ev.CancelledBy)
+		}
+	})
+
+	t.Run("CancelBooking by higher-rank emits self_cancel=false", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[7] = domain.Booking{
+			ID:          7,
+			RoomID:      2,
+			UserID:      99,
+			CreatorRole: domain.RoleStudentB,
+		}
+		pub := &fakePublisher{}
+		svc := service.New(repo, repo, pub)
+
+		teacher := service.Caller{UserID: 5, Login: "prof", Role: domain.RoleTeacher}
+		if err := svc.CancelBooking(context.Background(), 7, teacher); err != nil {
+			t.Fatalf("err = %v", err)
+		}
+
+		events := pub.Events()
+		if len(events) != 1 {
+			t.Fatalf("events = %d, want 1", len(events))
+		}
+		ev := events[0]
+		if ev.SelfCancel {
+			t.Error("expected SelfCancel=false when teacher cancels student booking")
+		}
+		if ev.OwnerID != 99 || ev.OwnerRole != domain.RoleStudentB {
+			t.Errorf("owner info: %+v", ev)
+		}
+		if ev.CancelledBy == nil || ev.CancelledBy.Role != domain.RoleTeacher {
+			t.Errorf("cancelled_by: %+v", ev.CancelledBy)
 		}
 	})
 
@@ -498,8 +607,27 @@ func TestService_PublishesEvents(t *testing.T) {
 		pub := &fakePublisher{}
 		svc := service.New(repo, repo, pub)
 
-		_ = svc.CancelBooking(context.Background(), 999)
+		_ = svc.CancelBooking(context.Background(), 999, defaultCaller())
 
+		if len(pub.Events()) != 0 {
+			t.Fatalf("expected no events, got %d", len(pub.Events()))
+		}
+	})
+
+	t.Run("CancelBooking does not publish when forbidden", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[7] = domain.Booking{
+			ID: 7, RoomID: 2, UserID: 99, CreatorRole: domain.RoleStudentB,
+		}
+		pub := &fakePublisher{}
+		svc := service.New(repo, repo, pub)
+
+		err := svc.CancelBooking(context.Background(), 7, defaultCaller())
+		if !errors.Is(err, domain.ErrForbidden) {
+			t.Fatalf("err = %v, want ErrForbidden", err)
+		}
 		if len(pub.Events()) != 0 {
 			t.Fatalf("expected no events, got %d", len(pub.Events()))
 		}

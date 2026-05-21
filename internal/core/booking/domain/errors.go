@@ -7,4 +7,5 @@ var (
 	ErrBookingNotFound  = errors.New("booking not found")
 	ErrInvalidTimeRange = errors.New("invalid time range")
 	ErrScheduleConflict = errors.New("schedule conflict")
+	ErrForbidden        = errors.New("forbidden")
 )
