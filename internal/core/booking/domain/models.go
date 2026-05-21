@@ -12,10 +12,12 @@ type Room struct {
 
 // Booking represents a reserved time slot for a room.
 type Booking struct {
-	ID        int
-	RoomID    int
-	StartTime time.Time
-	EndTime   time.Time
+	ID          int
+	RoomID      int
+	UserID      int
+	CreatorRole Role
+	StartTime   time.Time
+	EndTime     time.Time
 }
 
 // ScheduleItem describes an occupied room interval returned by schedule queries.

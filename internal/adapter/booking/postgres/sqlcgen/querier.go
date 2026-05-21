@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	CreateBooking(ctx context.Context, arg CreateBookingParams) (Booking, error)
 	DeleteBooking(ctx context.Context, id int64) (int64, error)
+	GetBookingByID(ctx context.Context, id int64) (Booking, error)
 	GetRoomByID(ctx context.Context, id int64) (Room, error)
 	ListBookingsByRoomID(ctx context.Context, roomID int64) ([]Booking, error)
 	ListRooms(ctx context.Context) ([]Room, error)

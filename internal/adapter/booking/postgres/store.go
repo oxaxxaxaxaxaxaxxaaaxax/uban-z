@@ -70,11 +70,24 @@ func (s *Store) ListByRoomID(ctx context.Context, roomID int) ([]domain.Booking,
 	return bookings, nil
 }
 
+func (s *Store) GetBookingByID(ctx context.Context, id int) (domain.Booking, error) {
+	row, err := s.queries.GetBookingByID(ctx, int64(id))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Booking{}, domain.ErrBookingNotFound
+		}
+		return domain.Booking{}, fmt.Errorf("get booking by id: %w", err)
+	}
+	return toDomainBooking(row), nil
+}
+
 func (s *Store) Create(ctx context.Context, booking domain.Booking) (domain.Booking, error) {
 	row, err := s.queries.CreateBooking(ctx, sqlcgen.CreateBookingParams{
-		RoomID:    int64(booking.RoomID),
-		StartTime: pgtype.Timestamptz{Time: booking.StartTime, Valid: true},
-		EndTime:   pgtype.Timestamptz{Time: booking.EndTime, Valid: true},
+		RoomID:      int64(booking.RoomID),
+		UserID:      int64(booking.UserID),
+		CreatorRole: string(booking.CreatorRole),
+		StartTime:   pgtype.Timestamptz{Time: booking.StartTime, Valid: true},
+		EndTime:     pgtype.Timestamptz{Time: booking.EndTime, Valid: true},
 	})
 	if err != nil {
 		return domain.Booking{}, translateInsertError(err)
@@ -121,9 +134,11 @@ func toDomainRoom(r sqlcgen.Room) domain.Room {
 
 func toDomainBooking(b sqlcgen.Booking) domain.Booking {
 	return domain.Booking{
-		ID:        int(b.ID),
-		RoomID:    int(b.RoomID),
-		StartTime: b.StartTime.Time,
-		EndTime:   b.EndTime.Time,
+		ID:          int(b.ID),
+		RoomID:      int(b.RoomID),
+		UserID:      int(b.UserID),
+		CreatorRole: domain.Role(b.CreatorRole),
+		StartTime:   b.StartTime.Time,
+		EndTime:     b.EndTime.Time,
 	}
 }

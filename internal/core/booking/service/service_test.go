@@ -113,6 +113,17 @@ func (f *fakeRepo) ListByRoomID(ctx context.Context, roomID int) ([]domain.Booki
 	return out, nil
 }
 
+func (f *fakeRepo) GetBookingByID(ctx context.Context, id int) (domain.Booking, error) {
+	_ = ctx
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	b, ok := f.bookings[id]
+	if !ok {
+		return domain.Booking{}, domain.ErrBookingNotFound
+	}
+	return b, nil
+}
+
 func (f *fakeRepo) Create(ctx context.Context, b domain.Booking) (domain.Booking, error) {
 	if f.createFn != nil {
 		return f.createFn(ctx, b)

@@ -15,6 +15,7 @@ type RoomRepository interface {
 // BookingRepository provides booking data to the booking core.
 type BookingRepository interface {
 	ListByRoomID(ctx context.Context, roomID int) ([]domain.Booking, error)
+	GetBookingByID(ctx context.Context, id int) (domain.Booking, error)
 	Create(ctx context.Context, booking domain.Booking) (domain.Booking, error)
 	DeleteByID(ctx context.Context, id int) error
 }
