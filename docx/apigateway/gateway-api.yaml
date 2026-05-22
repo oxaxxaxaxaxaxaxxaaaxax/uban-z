@@ -2,9 +2,15 @@ openapi: 3.1.0
 info:
   title: API Gateway
   version: 1.0.0
-  description: Reverse proxy для маршрутизации запросов к сервисам
+  description: Reverse proxy для маршрутизации запросов к сервисам. Маршруты доступны как в виде `/auth`, `/users`, `/rooms`, `/booking`, так и через алиасы с префиксом `/api`.
 
 paths:
+  /healthz:
+    get:
+      summary: Healthcheck API Gateway
+      responses:
+        '200':
+          description: Gateway работает
 
   # AUTH SERVICE
   /auth/register:
