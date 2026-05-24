@@ -2,19 +2,26 @@ package bookinghttp
 
 import (
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 
 	bookingserver "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/bookingserver"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/booking/domain"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/booking/service"
 )
 
 // Handler implements the generated booking HTTP server interface.
 type Handler struct {
 	useCase service.UseCase
+	logger  *slog.Logger
 }
 
-func NewHandler(useCase service.UseCase) *Handler {
-	return &Handler{useCase: useCase}
+func NewHandler(useCase service.UseCase, logger *slog.Logger) *Handler {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return &Handler{useCase: useCase, logger: logger}
 }
 
 func (h *Handler) GetRooms(w http.ResponseWriter, r *http.Request) {
@@ -50,10 +57,23 @@ func (h *Handler) PostBooking(w http.ResponseWriter, r *http.Request) {
 		EndTime:   request.EndTime,
 	})
 	if err != nil {
+		if errors.Is(err, domain.ErrScheduleConflict) {
+			h.logger.WarnContext(r.Context(), "booking.conflict",
+				slog.Int("room_id", request.RoomId),
+				slog.Time("start_time", request.StartTime),
+				slog.Time("end_time", request.EndTime),
+			)
+		}
 		writeError(w, err)
 		return
 	}
 
+	h.logger.InfoContext(r.Context(), "booking.created",
+		slog.Int("booking_id", booking.ID),
+		slog.Int("room_id", booking.RoomID),
+		slog.Time("start_time", booking.StartTime),
+		slog.Time("end_time", booking.EndTime),
+	)
 	writeJSON(w, http.StatusOK, mapBooking(booking))
 }
 
@@ -63,6 +83,9 @@ func (h *Handler) DeleteBookingId(w http.ResponseWriter, r *http.Request, id int
 		return
 	}
 
+	h.logger.InfoContext(r.Context(), "booking.cancelled",
+		slog.Int("booking_id", id),
+	)
 	w.WriteHeader(http.StatusOK)
 }
 
