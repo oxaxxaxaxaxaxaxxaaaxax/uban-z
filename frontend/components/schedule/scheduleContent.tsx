@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Box, Modal, Fade, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, IconButton } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { useFilteredRooms, type RoomFilters } from '@/hooks/useFilteredRooms';
 import RoomFiltersUI from '@/components/rooms/roomFilters';
 import RoomList from '@/components/rooms/roomList';
@@ -54,44 +55,36 @@ export default function ScheduleContent({ initialRooms }: ScheduleContentProps) 
 
     return (
         <>
-            <RoomFiltersUI
-                value={filters}
+            <RoomFiltersUI value={filters}
                 onChange={setFilters}
                 availableBuildings={availableBuildings}
             />
 
-            <RoomList
-                rooms={filteredRooms}
-                mode="compact"
-                onRoomClick={handleRoomClick}
+            <RoomList rooms={filteredRooms}
+                mode="compact" onRoomClick={handleRoomClick}
             />
 
-            <Modal
-                open={!!selectedRoom}
-                onClose={handleCloseModal}
-                closeAfterTransition
-                slotProps={{
-                    backdrop: {
-                        className: styles.backdrop,
-                    },
-                }}
-            >
-                <Fade in={!!selectedRoom}>
-                    <Box className={styles.modalContainer}>
-                        {loadingSchedule ? (
-                            <Box className={styles.loaderContainer}>
-                                <CircularProgress className={styles.loaderIcon} />
-                            </Box>
-                        ) : selectedRoom ? (
-                            <ScheduleTable
-                                schedule={schedule}
-                                roomName={selectedRoom.name || `Аудитория ${selectedRoom.id}`}
-                                onClose={handleCloseModal}
-                            />
-                        ) : null}
-                    </Box>
-                </Fade>
-            </Modal>
+            {selectedRoom && (
+                <div className={styles.backdropOverlay} onClick={handleCloseModal}>
+                    <div
+                        className={styles.modalContent}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+
+                    {loadingSchedule ? (
+                        <Box className={styles.loaderContainer}>
+                            <CircularProgress className={styles.loaderIcon} />
+                        </Box>
+                    ) : (
+                        <ScheduleTable
+                            schedule={schedule}
+                            roomName={selectedRoom.name || `Аудитория ${selectedRoom.id}`}
+                            onClose={handleCloseModal}
+                        />
+                    )}
+                    </div>
+                </div>
+            )}
         </>
     );
 }

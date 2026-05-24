@@ -22,9 +22,8 @@ export function useFilteredRooms(rooms: Room[], filters: RoomFilters): UseFilter
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase();
                 const roomName = (room.name || '').toLowerCase();
-                const roomId = String(room.id || '');
 
-                if (!roomName.includes(searchLower) && !roomId.includes(searchLower)) {
+                if (!roomName.includes(searchLower)) {
                     return false;
                 }
             }

@@ -6,7 +6,8 @@ import type { components } from '@/types/booking';
 import { TIME_SLOTS } from '@/lib/time-slots'
 import styles from './scheduleView.module.scss';
 
-type ScheduleItem = components['schemas']['ScheduleItem'];
+// more fiels then in contract
+type ScheduleItem = components['schemas']['ScheduleItem'] & { teacher?: string; groups_number?: string[]; }
 
 interface ScheduleViewProps {
     schedule: ScheduleItem[];
