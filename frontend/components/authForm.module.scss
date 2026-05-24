@@ -72,3 +72,21 @@
 .alert {
     margin-bottom: 16px !important;
 }
+
+.footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+.link {
+    color: #1976d2;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}

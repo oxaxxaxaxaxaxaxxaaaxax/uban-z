@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const publicRoutes = ['/login'];
+const publicRoutes = ['/login', '/register'];
 
 const STATIC_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.svg', '.gif', '.ico', '.json']
 

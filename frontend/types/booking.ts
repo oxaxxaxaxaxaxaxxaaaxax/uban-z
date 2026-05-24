@@ -138,6 +138,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Пользователь не авторизован */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Аудитория не найдена */
                 404: {
                     headers: {
@@ -196,6 +203,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Пользователь не авторизован */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Бронирование не найдено */
                 404: {
                     headers: {
@@ -232,8 +246,6 @@ export interface components {
             start_time?: string;
             /** Format: date-time */
             end_time?: string;
-            teacher?: string;
-            groups_number?: string[]; 
             type?: string;
         };
         CreateBookingRequest: {

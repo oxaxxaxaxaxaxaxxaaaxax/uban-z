@@ -5,12 +5,13 @@ import { useForm } from "react-hook-form";
 import { useRouter } from 'next/navigation';
 import {
     Paper, TextField, Button, Alert, IconButton,
-    InputAdornment
+    InputAdornment,
+    Link
 } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { login } from '@/lib/api/auth';
-import styles from './loginForm.module.scss';
+import styles from './authForm.module.scss';
 
 interface LoginFormInputs {
     username: string;
@@ -21,13 +22,11 @@ export default function LoginForm() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
 
-    const { register, handleSubmit, formState: { errors, isValid, isSubmitting, isDirty }, setError } =
+    const { register, handleSubmit, formState: { errors, isValid, isSubmitting }, setError } =
         useForm<LoginFormInputs>({
             mode: 'onChange',
             defaultValues: { username: '', password: '' },
         });
-
-    const isButtonDisabled = (isDirty && !isValid) || isSubmitting;
 
     const onSubmit = async (data: LoginFormInputs) => {
         const result = await login(data.username, data.password);
@@ -115,11 +114,14 @@ export default function LoginForm() {
                         type="submit"
                         variant="contained"
                         size="large"
-                        disabled={isButtonDisabled}
+                        disabled={isSubmitting || !isValid}
                         fullWidth
                     >
-                        {isSubmitting ? 'Sign in...' : 'Sign in'}
+                        {isSubmitting ? 'Войти...' : 'Войти'}
                     </Button>
+                    <div className={styles.footer}>
+                        Нет аккаунта? <Link href="/register" className={styles.link}>Зарегистрироваться</Link>
+                    </div>
                 </form>
             </div>
         </Paper>

@@ -3,7 +3,46 @@ import type { components } from '@/types/auth';
 
 type LoginRequest = components['schemas']['LoginRequest'];
 type LoginResponse = components['schemas']['LoginResponse'];
+type RegisterRequest = components['schemas']['RegisterRequest'];
+type UserResponse = components['schemas']['UserResponse'];
 
+export async function register(login: string, password: string, role: string): Promise<{
+    success: boolean,     error?: { status: number; message: string } 
+}> {
+    // Эмуляция успешной регистрации, если логин не занят и пароль валиден
+    const mockUsers = ['i.ivanov', 'p.petrov', 'teacher'];
+    
+    if (mockUsers.includes(login)) {
+        return { 
+            success: false, 
+            error: { status: 400, message: 'Пользователь с таким логином уже существует' } 
+        };
+    }
+    
+    if (password.length < 4) {
+        return { 
+            success: false, 
+            error: { status: 400, message: 'Пароль должен содержать минимум 4 символа' } 
+        };
+    }
+
+    return { success: true };
+    // const { data, error } = await apiRequest<UserResponse>('/auth/register', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({ login, password, role } as RegisterRequest),
+    // });
+    
+    // if (error) {
+    //     return { success: false, error };
+    // }
+
+    // if (!data?.login) {
+    //     return { success: false, error: { status: 500, message: 'Ошибка сервера' } };
+    // }
+    
+    // return { success: true };
+}
 
 export async function login(username: string, password: string): Promise<{
                 success: boolean, token?: string; error?: { status: number; message: string }
@@ -65,7 +104,7 @@ export async function getMe(token?: string): Promise<User | null> {
     if (token === 'mock_token_123') {
         const isServer = typeof window === 'undefined';
         const url = isServer 
-          ? `http://localhost:3000/testData/getme-user.json`
+          ? `http://localhost:3001/testData/getme-user.json`
           : `/testData/getme-user.json`;                      
 
         const response = await fetch(url, { cache: 'no-store' });

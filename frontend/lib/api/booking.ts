@@ -10,7 +10,7 @@ type Booking = components['schemas']['Booking'];
 export async function getRooms(): Promise<{
   success: boolean; rooms?: Room[]; error?: { status: number; message: string };
 }> {
-    const response = await fetch('http://localhost:3000/testData/rooms.json');
+    const response = await fetch('http://localhost:3001/testData/rooms.json');
     const mockData = await response.json();
     return { 
         success: true, 
@@ -28,7 +28,7 @@ export async function getRooms(): Promise<{
 export async function getRoomSchedule(id: number): Promise<{
   success: boolean; schedule?: ScheduleItem[]; error?: { status: number; message: string };
 }> {
-    const response = await fetch('http://localhost:3000/testData/schedules.json');
+    const response = await fetch('http://localhost:3001/testData/schedules.json');
     const mockData = await response.json();
     return { 
         success: true, 
@@ -124,7 +124,7 @@ export async function cancelBooking(bookingId: number): Promise<{
 export async function getUserBookings(): Promise<{
   success: boolean; bookings?: Booking[]; error?: { status: number; message: string };
 }> {
-    const response = await fetch('http://localhost:3000/testData/user-bookings.json');
+    const response = await fetch('http://localhost:3001/testData/user-bookings.json');
     const mockData = await response.json();
     return {
         success: true,
@@ -142,4 +142,3 @@ export async function getUserBookings(): Promise<{
     //     bookings: data || []
     // };
 }
-

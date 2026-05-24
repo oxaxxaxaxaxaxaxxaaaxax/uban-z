@@ -1,7 +1,9 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import styles from '../page.module.scss';
-import LoginForm from '@/components/loginForm';
+import RegisterForm from '@/components/registerForm';
+
+
 
 export default async function LoginPage() {
     const cookieStore = await cookies();
@@ -13,7 +15,7 @@ export default async function LoginPage() {
 
     return (
         <main className={styles.container}>
-            <LoginForm/>
+            <RegisterForm/>
         </main>
     );
 }
