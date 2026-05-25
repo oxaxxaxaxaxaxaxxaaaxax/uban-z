@@ -126,6 +126,12 @@ components:
           format: date-time
         type:
           type: string
+        teacher:
+          type: string
+        group_numbers:
+          type: array
+          items:
+            type: string
 
     CreateBookingRequest:
       type: object

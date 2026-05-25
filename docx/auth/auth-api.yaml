@@ -23,6 +23,8 @@ paths:
                 $ref: '#/components/schemas/UserResponse'
         '400':
           description: Некорректные данные
+        '409':
+          description: Пользователь с таким логином уже существует
         '500':
           description: Внутренняя ошибка сервера
 
