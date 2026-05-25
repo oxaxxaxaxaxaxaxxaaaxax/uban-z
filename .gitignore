@@ -1,1 +1,30 @@
 .env
+.kilo
+.env.local
+.env.*.local
+
+# Temporary files
+
+tmp/
+temp/
+
+# Test cache
+
+.cache/
+
+# Profiling
+
+*.prof
+
+# Generated files (optional — если используешь генерацию)
+
+# *.gen.go
+
+# Docker
+
+*.tar
+
+# Local config files
+
+config.local.yaml
+config.local.json
