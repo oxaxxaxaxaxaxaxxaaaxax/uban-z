@@ -39,8 +39,18 @@ func (r Role) IsKnown() bool {
 // CanCancelOther reports whether a request from r may cancel a booking
 // whose creator had role `other`. Strict inequality — equal rank cannot
 // cancel each other's bookings (only the owner themselves can).
+//
+// Admin is a superuser exception: admin may cancel any known role, including
+// other admins. Parser-service writes class rows with creator_role=admin, and
+// only an admin caller is allowed to cancel them.
 func (r Role) CanCancelOther(other Role) bool {
-	return r.IsKnown() && other.IsKnown() && r.Rank() > other.Rank()
+	if !r.IsKnown() || !other.IsKnown() {
+		return false
+	}
+	if r == RoleAdmin {
+		return true
+	}
+	return r.Rank() > other.Rank()
 }
 
 // ParseRole validates an external string and returns the typed Role.
