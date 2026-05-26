@@ -65,7 +65,38 @@ func (s *Store) ListByRoomID(ctx context.Context, roomID int) ([]domain.Booking,
 
 	bookings := make([]domain.Booking, 0, len(rows))
 	for _, b := range rows {
-		bookings = append(bookings, toDomainBooking(b))
+		bookings = append(bookings, domain.Booking{
+			ID:           int(b.ID),
+			RoomID:       int(b.RoomID),
+			UserID:       int(b.UserID),
+			CreatorRole:  domain.Role(b.CreatorRole),
+			StartTime:    b.StartTime.Time,
+			EndTime:      b.EndTime.Time,
+			Teacher:      textOr(b.Teacher),
+			GroupNumbers: b.GroupNumbers,
+		})
+	}
+	return bookings, nil
+}
+
+func (s *Store) ListByUserID(ctx context.Context, userID int) ([]domain.Booking, error) {
+	rows, err := s.queries.ListBookingsByUserID(ctx, int64(userID))
+	if err != nil {
+		return nil, fmt.Errorf("list bookings by user id: %w", err)
+	}
+
+	bookings := make([]domain.Booking, 0, len(rows))
+	for _, b := range rows {
+		bookings = append(bookings, domain.Booking{
+			ID:           int(b.ID),
+			RoomID:       int(b.RoomID),
+			UserID:       int(b.UserID),
+			CreatorRole:  domain.Role(b.CreatorRole),
+			StartTime:    b.StartTime.Time,
+			EndTime:      b.EndTime.Time,
+			Teacher:      textOr(b.Teacher),
+			GroupNumbers: b.GroupNumbers,
+		})
 	}
 	return bookings, nil
 }
@@ -78,7 +109,16 @@ func (s *Store) GetBookingByID(ctx context.Context, id int) (domain.Booking, err
 		}
 		return domain.Booking{}, fmt.Errorf("get booking by id: %w", err)
 	}
-	return toDomainBooking(row), nil
+	return domain.Booking{
+		ID:           int(row.ID),
+		RoomID:       int(row.RoomID),
+		UserID:       int(row.UserID),
+		CreatorRole:  domain.Role(row.CreatorRole),
+		StartTime:    row.StartTime.Time,
+		EndTime:      row.EndTime.Time,
+		Teacher:      textOr(row.Teacher),
+		GroupNumbers: row.GroupNumbers,
+	}, nil
 }
 
 func (s *Store) Create(ctx context.Context, booking domain.Booking) (domain.Booking, error) {
@@ -92,7 +132,16 @@ func (s *Store) Create(ctx context.Context, booking domain.Booking) (domain.Book
 	if err != nil {
 		return domain.Booking{}, translateInsertError(err)
 	}
-	return toDomainBooking(row), nil
+	return domain.Booking{
+		ID:           int(row.ID),
+		RoomID:       int(row.RoomID),
+		UserID:       int(row.UserID),
+		CreatorRole:  domain.Role(row.CreatorRole),
+		StartTime:    row.StartTime.Time,
+		EndTime:      row.EndTime.Time,
+		Teacher:      textOr(row.Teacher),
+		GroupNumbers: row.GroupNumbers,
+	}, nil
 }
 
 func (s *Store) DeleteByID(ctx context.Context, id int) error {
@@ -132,13 +181,9 @@ func toDomainRoom(r sqlcgen.Room) domain.Room {
 	}
 }
 
-func toDomainBooking(b sqlcgen.Booking) domain.Booking {
-	return domain.Booking{
-		ID:          int(b.ID),
-		RoomID:      int(b.RoomID),
-		UserID:      int(b.UserID),
-		CreatorRole: domain.Role(b.CreatorRole),
-		StartTime:   b.StartTime.Time,
-		EndTime:     b.EndTime.Time,
+func textOr(t pgtype.Text) string {
+	if !t.Valid {
+		return ""
 	}
+	return t.String
 }

@@ -27,6 +27,7 @@ type CreateBookingInput struct {
 type UseCase interface {
 	ListRooms(ctx context.Context) ([]domain.Room, error)
 	GetRoomSchedule(ctx context.Context, roomID int) ([]domain.ScheduleItem, error)
+	ListMyBookings(ctx context.Context, caller Caller) ([]domain.Booking, error)
 	CreateBooking(ctx context.Context, input CreateBookingInput) (domain.Booking, error)
 	CancelBooking(ctx context.Context, bookingID int, caller Caller) error
 }
@@ -66,13 +67,23 @@ func (s *Service) GetRoomSchedule(ctx context.Context, roomID int) ([]domain.Sch
 	schedule := make([]domain.ScheduleItem, 0, len(bookings))
 	for _, booking := range bookings {
 		schedule = append(schedule, domain.ScheduleItem{
-			StartTime: booking.StartTime,
-			EndTime:   booking.EndTime,
-			Type:      "booking",
+			StartTime:    booking.StartTime,
+			EndTime:      booking.EndTime,
+			Type:         "booking",
+			Teacher:      booking.Teacher,
+			GroupNumbers: booking.GroupNumbers,
 		})
 	}
 
 	return schedule, nil
+}
+
+// ListMyBookings returns bookings owned by the caller, ordered by start_time.
+func (s *Service) ListMyBookings(ctx context.Context, caller Caller) ([]domain.Booking, error) {
+	if !caller.Role.IsKnown() {
+		return nil, domain.ErrForbidden
+	}
+	return s.bookingRepository.ListByUserID(ctx, caller.UserID)
 }
 
 func (s *Service) CreateBooking(ctx context.Context, input CreateBookingInput) (domain.Booking, error) {
