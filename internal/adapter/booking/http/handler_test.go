@@ -52,6 +52,7 @@ func jsonNumber(i int) string {
 type stubUseCase struct {
 	listRoomsFn       func(ctx context.Context) ([]domain.Room, error)
 	getRoomScheduleFn func(ctx context.Context, roomID int) ([]domain.ScheduleItem, error)
+	listMyBookingsFn  func(ctx context.Context, caller service.Caller) ([]domain.Booking, error)
 	createBookingFn   func(ctx context.Context, input service.CreateBookingInput) (domain.Booking, error)
 	cancelBookingFn   func(ctx context.Context, bookingID int, caller service.Caller) error
 }
@@ -61,6 +62,9 @@ func (s stubUseCase) ListRooms(ctx context.Context) ([]domain.Room, error) {
 }
 func (s stubUseCase) GetRoomSchedule(ctx context.Context, roomID int) ([]domain.ScheduleItem, error) {
 	return s.getRoomScheduleFn(ctx, roomID)
+}
+func (s stubUseCase) ListMyBookings(ctx context.Context, caller service.Caller) ([]domain.Booking, error) {
+	return s.listMyBookingsFn(ctx, caller)
 }
 func (s stubUseCase) CreateBooking(ctx context.Context, input service.CreateBookingInput) (domain.Booking, error) {
 	return s.createBookingFn(ctx, input)
@@ -295,6 +299,74 @@ func TestPostBooking(t *testing.T) {
 		resp, _ := do(t, http.MethodPost, srv.URL+"/booking", token, validBody())
 		if resp.StatusCode != http.StatusInternalServerError {
 			t.Fatalf("status = %d", resp.StatusCode)
+		}
+	})
+}
+
+func TestGetBookingMy(t *testing.T) {
+	t.Parallel()
+
+	t.Run("401 without token", func(t *testing.T) {
+		t.Parallel()
+		uc := stubUseCase{
+			listMyBookingsFn: func(ctx context.Context, caller service.Caller) ([]domain.Booking, error) {
+				t.Fatal("should not be called")
+				return nil, nil
+			},
+		}
+		srv := newServer(t, uc)
+		resp, _ := do(t, http.MethodGet, srv.URL+"/booking/my", "", nil)
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("status = %d, want 401", resp.StatusCode)
+		}
+	})
+
+	t.Run("200 returns caller's bookings", func(t *testing.T) {
+		t.Parallel()
+		uc := stubUseCase{
+			listMyBookingsFn: func(_ context.Context, caller service.Caller) ([]domain.Booking, error) {
+				if caller.UserID != 7 || caller.Role != domain.RoleStudentB {
+					t.Errorf("caller = %+v", caller)
+				}
+				return []domain.Booking{
+					{ID: 1, RoomID: 2, UserID: 7, CreatorRole: domain.RoleStudentB,
+						StartTime: time.Date(2026, 4, 17, 9, 0, 0, 0, time.UTC),
+						EndTime:   time.Date(2026, 4, 17, 10, 0, 0, 0, time.UTC)},
+				}, nil
+			},
+		}
+		srv := newServer(t, uc)
+		token := mintToken(t, 7, "alice", domain.RoleStudentB)
+
+		resp, body := do(t, http.MethodGet, srv.URL+"/booking/my", token, nil)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body=%s", resp.StatusCode, body)
+		}
+		var bookings []bookingserver.Booking
+		if err := json.Unmarshal(body, &bookings); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		if len(bookings) != 1 || bookings[0].Id == nil || *bookings[0].Id != 1 {
+			t.Fatalf("bookings = %+v", bookings)
+		}
+	})
+
+	t.Run("200 with empty array when caller has none", func(t *testing.T) {
+		t.Parallel()
+		uc := stubUseCase{
+			listMyBookingsFn: func(_ context.Context, _ service.Caller) ([]domain.Booking, error) {
+				return nil, nil
+			},
+		}
+		srv := newServer(t, uc)
+		token := mintToken(t, 7, "alice", domain.RoleStudentB)
+
+		resp, body := do(t, http.MethodGet, srv.URL+"/booking/my", token, nil)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, body=%s", resp.StatusCode, body)
+		}
+		if strings.TrimSpace(string(body)) != "[]" {
+			t.Fatalf("body = %q, want []", body)
 		}
 	})
 }

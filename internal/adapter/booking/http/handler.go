@@ -88,6 +88,25 @@ func (h *Handler) PostBooking(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, mapBooking(booking))
 }
 
+func (h *Handler) GetBookingMy(w http.ResponseWriter, r *http.Request) {
+	identity, ok := httpx.RequireIdentity(w, r)
+	if !ok {
+		return
+	}
+
+	bookings, err := h.useCase.ListMyBookings(r.Context(), service.Caller{
+		UserID: identity.UserID,
+		Login:  identity.Login,
+		Role:   identity.Role,
+	})
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, mapBookings(bookings))
+}
+
 func (h *Handler) DeleteBookingId(w http.ResponseWriter, r *http.Request, id int) {
 	identity, ok := httpx.RequireIdentity(w, r)
 	if !ok {
