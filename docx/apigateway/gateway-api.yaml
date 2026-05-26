@@ -29,6 +29,19 @@ paths:
         '500':
           description: Внутренняя ошибка сервера
 
+  /auth/me:
+    get:
+      summary: Proxy to Auth Service
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Данные пользователя
+        '400':
+          description: Некорректные данные
+        '500':
+          description: Внутренняя ошибка сервера
+
   # BOOKING SERVICE
   /rooms:
     get:
@@ -59,11 +72,15 @@ paths:
   /booking:
     post:
       summary: Proxy to Booking Service
+      security:
+        - bearerAuth: [ ]
       responses:
         '200':
           description: Бронирование создано
         '400':
           description: Некорректные данные запроса
+        '401':
+          description: Пользователь не авторизован
         '404':
           description: Аудитория не найдена
         '409':
@@ -74,6 +91,8 @@ paths:
   /booking/{id}:
     delete:
       summary: Proxy to Booking Service
+      security:
+        - bearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -83,7 +102,29 @@ paths:
       responses:
         '200':
           description: Бронирование отменено
+        '401':
+          description: Пользователь не авторизован
         '404':
           description: Бронирование не найдено
         '500':
           description: Внутренняя ошибка сервера
+
+  /booking/my:
+    get:
+      summary: Proxy to Booking Service
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Список бронирований пользователя
+        '401':
+          description: Пользователь не авторизован
+        '500':
+          description: Внутренняя ошибка сервера
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
