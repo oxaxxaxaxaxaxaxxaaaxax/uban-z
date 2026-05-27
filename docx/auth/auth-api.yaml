@@ -80,10 +80,13 @@ components:
           type: string
         role:
           type: string
+        full_name:
+          type: string
       required:
         - login
         - password
         - role
+        - full_name
 
     LoginRequest:
       type: object
