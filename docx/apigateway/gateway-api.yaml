@@ -10,9 +10,19 @@ paths:
   /auth/register:
     post:
       summary: Proxy to Auth Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
         '200':
           description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
         '400':
           description: Некорректные данные
         '500':
@@ -21,9 +31,19 @@ paths:
   /auth/login:
     post:
       summary: Proxy to Auth Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
           description: Успешная авторизация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
         '401':
           description: Неверный login или пароль
         '500':
@@ -37,6 +57,10 @@ paths:
       responses:
         '200':
           description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
         '400':
           description: Некорректные данные
         '500':
@@ -49,6 +73,12 @@ paths:
       responses:
         '200':
           description: Список аудиторий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
         '500':
           description: Внутренняя ошибка сервера
 
@@ -64,6 +94,12 @@ paths:
       responses:
         '200':
           description: Расписание аудитории
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleItem'
         '404':
           description: Аудитория не найдена
         '500':
@@ -74,9 +110,19 @@ paths:
       summary: Proxy to Booking Service
       security:
         - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
       responses:
         '200':
           description: Бронирование создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
         '400':
           description: Некорректные данные запроса
         '401':
@@ -117,6 +163,12 @@ paths:
       responses:
         '200':
           description: Список бронирований пользователя
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
         '401':
           description: Пользователь не авторизован
         '500':
@@ -124,7 +176,113 @@ paths:
 
 
 components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        login:
+          type: string
+
+    RegisterRequest:
+      type: object
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+        full_name:
+          type: string
+      required:
+        - login
+        - password
+        - role
+        - full_name
+
+    LoginRequest:
+      type: object
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+      required:
+        - login
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        room_id:
+          type: integer
+        start_time:
+          type: string
+        end_time:
+          type: string
+
+    ScheduleItem:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        type:
+          type: string
+        teacher:
+          type: string
+        group_numbers:
+          type: array
+          items:
+            type: string
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        capacity:
+          type: integer
+        building:
+          type: string
+
+    CreateBookingRequest:
+      type: object
+      properties:
+        room_id:
+          type: integer
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+      required:
+        - room_id
+        - start_time
+        - end_time
+
+
+
+
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
+
+
