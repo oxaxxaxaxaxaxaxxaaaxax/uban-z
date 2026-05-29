@@ -42,6 +42,32 @@ func TestGatewayProxiesAuthRequests(t *testing.T) {
 	}
 }
 
+func TestGatewayProxiesAuthMe(t *testing.T) {
+	t.Parallel()
+
+	var gotPath string
+	authService := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":1,"login":"john","role":"student_b","full_name":"John Smith"}`))
+	})
+
+	gateway := newTestGateway(t, authService, http.NotFoundHandler(), nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+	req.Header.Set("Authorization", "Bearer token")
+	rec := httptest.NewRecorder()
+
+	gateway.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if gotPath != "/api/auth/me" {
+		t.Fatalf("auth path = %q, want /api/auth/me", gotPath)
+	}
+}
+
 func TestGatewayProxiesBookingRequests(t *testing.T) {
 	t.Parallel()
 
@@ -55,7 +81,7 @@ func TestGatewayProxiesBookingRequests(t *testing.T) {
 	gateway := newTestGateway(t, http.NotFoundHandler(), bookingService, nil)
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/rooms/1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/rooms/1", nil)
 
 	gateway.ServeHTTP(rec, req)
 
@@ -77,7 +103,7 @@ func TestGatewayNormalizesPlainTextErrors(t *testing.T) {
 	gateway := newTestGateway(t, http.NotFoundHandler(), bookingService, nil)
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/rooms/404", nil)
+	req := httptest.NewRequest(http.MethodGet, "/rooms/404", nil)
 
 	gateway.ServeHTTP(rec, req)
 
@@ -100,7 +126,7 @@ func TestGatewayReturnsBadGatewayWhenUpstreamUnavailable(t *testing.T) {
 	gateway := newTestGateway(t, http.NotFoundHandler(), http.NotFoundHandler(), errors.New("dial failed"))
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/users/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
 
 	gateway.ServeHTTP(rec, req)
 
@@ -114,6 +140,27 @@ func TestGatewayReturnsBadGatewayWhenUpstreamUnavailable(t *testing.T) {
 	}
 	if body["error"] != "upstream unavailable" || body["service"] != "auth" {
 		t.Fatalf("body = %#v, want auth upstream unavailable", body)
+	}
+}
+
+func TestGatewayDoesNotExposeRemovedUserRoutes(t *testing.T) {
+	t.Parallel()
+
+	gateway := newTestGateway(t, http.NotFoundHandler(), http.NotFoundHandler(), nil)
+
+	for _, path := range []string{"/users/me", "/api/users/me"} {
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+
+			gateway.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusNotFound, rec.Body.String())
+			}
+		})
 	}
 }
 

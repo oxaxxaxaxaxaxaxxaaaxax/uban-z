@@ -1,6 +1,7 @@
 package handler_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,97 +11,160 @@ import (
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/http/middleware"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/jwt"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/repository/in_memory"
-	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/domain"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/service"
 )
 
-func TestUserRoutesAccessControl(t *testing.T) {
+func TestAuthRoutesRegisterLoginAndMe(t *testing.T) {
 	t.Parallel()
 
-	mux, studentToken, adminToken := newUserTestServer(t)
+	mux := newAuthTestServer(t)
 
-	t.Run("student can get own profile without password leak", func(t *testing.T) {
-		t.Parallel()
+	registerBody := `{"login":"student","password":"secret","role":"student_b","full_name":"Student Name"}`
+	registerRec := performRequest(mux, http.MethodPost, "/api/auth/register", registerBody, "")
+	if registerRec.Code != http.StatusOK {
+		t.Fatalf("register status = %d, want %d; body = %s", registerRec.Code, http.StatusOK, registerRec.Body.String())
+	}
 
-		rec := performRequest(mux, http.MethodGet, "/api/users/me", "", studentToken)
-
-		if rec.Code != http.StatusOK {
-			t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	registerResp := registerRec.Body.String()
+	for _, want := range []string{`"login":"student"`, `"role":"student_b"`, `"full_name":"Student Name"`, `"id":`} {
+		if !strings.Contains(registerResp, want) {
+			t.Fatalf("register body = %s, want %s", registerResp, want)
 		}
-		body := rec.Body.String()
-		if !strings.Contains(body, `"login":"student"`) {
-			t.Fatalf("body = %s, want student login", body)
+	}
+	if strings.Contains(strings.ToLower(registerResp), "password") {
+		t.Fatalf("register body leaks password: %s", registerResp)
+	}
+
+	loginRec := performRequest(mux, http.MethodPost, "/api/auth/login", `{"login":"student","password":"secret"}`, "")
+	if loginRec.Code != http.StatusOK {
+		t.Fatalf("login status = %d, want %d; body = %s", loginRec.Code, http.StatusOK, loginRec.Body.String())
+	}
+
+	var loginResp struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(loginRec.Body).Decode(&loginResp); err != nil {
+		t.Fatalf("decode login response: %v", err)
+	}
+	if loginResp.Token == "" {
+		t.Fatal("login token is empty")
+	}
+
+	meRec := performRequest(mux, http.MethodGet, "/api/auth/me", "", loginResp.Token)
+	if meRec.Code != http.StatusOK {
+		t.Fatalf("me status = %d, want %d; body = %s", meRec.Code, http.StatusOK, meRec.Body.String())
+	}
+	for _, want := range []string{`"login":"student"`, `"role":"student_b"`, `"full_name":"Student Name"`} {
+		if !strings.Contains(meRec.Body.String(), want) {
+			t.Fatalf("me body = %s, want %s", meRec.Body.String(), want)
 		}
-		if strings.Contains(strings.ToLower(body), "password") {
-			t.Fatalf("body leaks password: %s", body)
-		}
-	})
-
-	t.Run("student cannot get user by id", func(t *testing.T) {
-		t.Parallel()
-
-		rec := performRequest(mux, http.MethodGet, "/api/users/1", "", studentToken)
-
-		if rec.Code != http.StatusForbidden {
-			t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusForbidden, rec.Body.String())
-		}
-	})
-
-	t.Run("admin can get user by id", func(t *testing.T) {
-		t.Parallel()
-
-		rec := performRequest(mux, http.MethodGet, "/api/users/2", "", adminToken)
-
-		if rec.Code != http.StatusOK {
-			t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusOK, rec.Body.String())
-		}
-	})
-
-	t.Run("self update cannot change role", func(t *testing.T) {
-		t.Parallel()
-
-		rec := performRequest(mux, http.MethodPut, "/api/users/me", `{"role":"admin"}`, studentToken)
-
-		if rec.Code != http.StatusForbidden {
-			t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusForbidden, rec.Body.String())
-		}
-	})
+	}
 }
 
-func newUserTestServer(t *testing.T) (*http.ServeMux, string, string) {
+func TestAuthRoutesRejectInvalidRequests(t *testing.T) {
+	t.Parallel()
+
+	mux := newAuthTestServer(t)
+
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   string
+		want   int
+	}{
+		{
+			name:   "register missing full name",
+			method: http.MethodPost,
+			path:   "/api/auth/register",
+			body:   `{"login":"student","password":"secret","role":"student_b"}`,
+			want:   http.StatusBadRequest,
+		},
+		{
+			name:   "register invalid role",
+			method: http.MethodPost,
+			path:   "/api/auth/register",
+			body:   `{"login":"student","password":"secret","role":"user","full_name":"Student Name"}`,
+			want:   http.StatusBadRequest,
+		},
+		{
+			name:   "login missing password",
+			method: http.MethodPost,
+			path:   "/api/auth/login",
+			body:   `{"login":"student"}`,
+			want:   http.StatusBadRequest,
+		},
+		{
+			name:   "removed user update route",
+			method: http.MethodPut,
+			path:   "/api/users/me",
+			body:   `{"role":"admin"}`,
+			want:   http.StatusNotFound,
+		},
+		{
+			name:   "removed admin user route",
+			method: http.MethodGet,
+			path:   "/api/users/1",
+			want:   http.StatusNotFound,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			rec := performRequest(mux, tc.method, tc.path, tc.body, "")
+			if rec.Code != tc.want {
+				t.Fatalf("status = %d, want %d; body = %s", rec.Code, tc.want, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestAuthRoutesDuplicateAndWrongPassword(t *testing.T) {
+	t.Parallel()
+
+	mux := newAuthTestServer(t)
+	body := `{"login":"student","password":"secret","role":"student_b","full_name":"Student Name"}`
+	if rec := performRequest(mux, http.MethodPost, "/api/auth/register", body, ""); rec.Code != http.StatusOK {
+		t.Fatalf("first register status = %d, want %d; body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if rec := performRequest(mux, http.MethodPost, "/api/auth/register", body, ""); rec.Code != http.StatusConflict {
+		t.Fatalf("duplicate register status = %d, want %d; body = %s", rec.Code, http.StatusConflict, rec.Body.String())
+	}
+	if rec := performRequest(mux, http.MethodPost, "/api/auth/login", `{"login":"student","password":"wrong"}`, ""); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("wrong password status = %d, want %d; body = %s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+}
+
+func TestAuthMeRequiresValidToken(t *testing.T) {
+	t.Parallel()
+
+	mux := newAuthTestServer(t)
+
+	if rec := performRequest(mux, http.MethodGet, "/api/auth/me", "", ""); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("missing token status = %d, want %d; body = %s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+	if rec := performRequest(mux, http.MethodGet, "/api/auth/me", "", "not-a-jwt"); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("invalid token status = %d, want %d; body = %s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+}
+
+func newAuthTestServer(t *testing.T) *http.ServeMux {
 	t.Helper()
 
 	repo := in_memory.NewInMemoryUserRepo()
 	tokenManager := jwt.NewJWTManager("test-secret")
 	authService := service.NewAuthService(repo, tokenManager)
-
-	admin, err := authService.Register("admin", "secret", domain.RoleAdmin)
-	if err != nil {
-		t.Fatalf("register admin: %v", err)
-	}
-	student, err := authService.Register("student", "secret", domain.RoleStudentB)
-	if err != nil {
-		t.Fatalf("register student: %v", err)
-	}
-
-	adminToken, err := tokenManager.Generate(admin)
-	if err != nil {
-		t.Fatalf("generate admin token: %v", err)
-	}
-	studentToken, err := tokenManager.Generate(student)
-	if err != nil {
-		t.Fatalf("generate student token: %v", err)
-	}
-
-	userHandler := httpHandler.NewUserHandler(authService)
+	authHandler := httpHandler.NewAuthHandler(authService)
 	tokenMw := middleware.JWTMiddleware(tokenManager)
 
 	mux := http.NewServeMux()
-	mux.Handle("GET /api/users/me", tokenMw(http.HandlerFunc(userHandler.GetMe)))
-	mux.Handle("PUT /api/users/me", tokenMw(http.HandlerFunc(userHandler.UpdateMe)))
-	mux.Handle("GET /api/users/{id}", tokenMw(http.HandlerFunc(userHandler.GetUserByID)))
+	mux.HandleFunc("POST /api/auth/register", authHandler.PostAuthRegister)
+	mux.HandleFunc("POST /api/auth/login", authHandler.PostAuthLogin)
+	mux.Handle("GET /api/auth/me", tokenMw(http.HandlerFunc(authHandler.GetAuthMe)))
 
-	return mux, studentToken, adminToken
+	return mux
 }
 
 func performRequest(handler http.Handler, method, path, body, token string) *httptest.ResponseRecorder {
@@ -108,7 +172,9 @@ func performRequest(handler http.Handler, method, path, body, token string) *htt
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)

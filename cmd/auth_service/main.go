@@ -48,7 +48,6 @@ func main() {
 	authService := service.NewAuthService(repo, jwtManager)
 
 	authHandler := httpHandler.NewAuthHandler(authService)
-	userHandler := httpHandler.NewUserHandler(authService)
 
 	tokenMw := middleware.JWTMiddleware(jwtManager)
 
@@ -56,14 +55,7 @@ func main() {
 
 	mux.HandleFunc("POST /api/auth/register", authHandler.PostAuthRegister)
 	mux.HandleFunc("POST /api/auth/login", authHandler.PostAuthLogin)
-
-	mux.Handle("GET /api/users", tokenMw(http.HandlerFunc(userHandler.GetUsers)))
-	mux.Handle("GET /api/users/me", tokenMw(http.HandlerFunc(userHandler.GetMe)))
-	mux.Handle("PUT /api/users/me", tokenMw(http.HandlerFunc(userHandler.UpdateMe)))
-	mux.Handle("DELETE /api/users/me", tokenMw(http.HandlerFunc(userHandler.DeleteMe)))
-	mux.Handle("GET /api/users/{id}", tokenMw(http.HandlerFunc(userHandler.GetUserByID)))
-	mux.Handle("PUT /api/users/{id}", tokenMw(http.HandlerFunc(userHandler.UpdateUser)))
-	mux.Handle("DELETE /api/users/{id}", tokenMw(http.HandlerFunc(userHandler.DeleteUser)))
+	mux.Handle("GET /api/auth/me", tokenMw(http.HandlerFunc(authHandler.GetAuthMe)))
 
 	log.Printf("Server started on :%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))

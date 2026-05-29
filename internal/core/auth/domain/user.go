@@ -12,16 +12,17 @@ const (
 
 var (
 	ErrInvalidRole       = errors.New("invalid role")
+	ErrInvalidUserData   = errors.New("invalid user data")
 	ErrUserAlreadyExists = errors.New("user already exists")
 	ErrUserNotFound      = errors.New("user not found")
-	ErrLoginAlreadyTaken = errors.New("login already taken")
 )
 
 type User struct {
 	ID       int
 	Login    string
-	Password string // позже захешируем
+	Password string
 	Role     string
+	FullName string
 }
 
 func IsValidRole(role string) bool {

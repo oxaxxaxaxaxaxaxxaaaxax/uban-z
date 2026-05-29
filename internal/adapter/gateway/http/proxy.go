@@ -48,13 +48,11 @@ func NewHandler(cfg Config) (*Handler, error) {
 	}
 
 	h := &Handler{mux: http.NewServeMux()}
-	authAPIProxy := newProxy("auth", authURL, transport, keepPath)
-	authBareProxy := newProxy("auth", authURL, transport, ensureAPIPrefix)
+	authProxy := newProxy("auth", authURL, transport, ensureAPIPrefix)
 	bookingBareProxy := newProxy("booking", bookingURL, transport, keepPath)
-	bookingAPIProxy := newProxy("booking", bookingURL, transport, stripAPIPrefix)
 
-	h.handleAuth(authBareProxy, authAPIProxy)
-	h.handleBooking(bookingBareProxy, bookingAPIProxy)
+	h.handleAuth(authProxy)
+	h.handleBooking(bookingBareProxy)
 	h.mux.HandleFunc("/", notFound)
 
 	return h, nil
@@ -64,26 +62,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.mux.ServeHTTP(w, r)
 }
 
-func (h *Handler) handleAuth(bareProxy http.Handler, apiProxy http.Handler) {
-	h.mux.Handle("/api/auth/", apiProxy)
-	h.mux.Handle("/api/users", apiProxy)
-	h.mux.Handle("/api/users/", apiProxy)
-
-	h.mux.Handle("/auth/", bareProxy)
-	h.mux.Handle("/users", bareProxy)
-	h.mux.Handle("/users/", bareProxy)
+func (h *Handler) handleAuth(proxy http.Handler) {
+	h.mux.Handle("/auth/", proxy)
 }
 
-func (h *Handler) handleBooking(bareProxy http.Handler, apiProxy http.Handler) {
-	h.mux.Handle("/api/rooms", apiProxy)
-	h.mux.Handle("/api/rooms/", apiProxy)
-	h.mux.Handle("/api/booking", apiProxy)
-	h.mux.Handle("/api/booking/", apiProxy)
-
-	h.mux.Handle("/rooms", bareProxy)
-	h.mux.Handle("/rooms/", bareProxy)
-	h.mux.Handle("/booking", bareProxy)
-	h.mux.Handle("/booking/", bareProxy)
+func (h *Handler) handleBooking(proxy http.Handler) {
+	h.mux.Handle("/rooms", proxy)
+	h.mux.Handle("/rooms/", proxy)
+	h.mux.Handle("/booking", proxy)
+	h.mux.Handle("/booking/", proxy)
 }
 
 type pathRewrite func(string) string
@@ -133,16 +120,6 @@ func ensureAPIPrefix(path string) string {
 		return path
 	}
 	return "/api" + path
-}
-
-func stripAPIPrefix(path string) string {
-	if path == "/api" {
-		return "/"
-	}
-	if strings.HasPrefix(path, "/api/") {
-		return strings.TrimPrefix(path, "/api")
-	}
-	return path
 }
 
 func normalizeErrorResponse(service string, resp *http.Response) error {
