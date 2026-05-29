@@ -6,11 +6,16 @@
 package booking
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/oapi-codegen/runtime"
+)
+
+const (
+	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
 // Booking defines model for Booking.
@@ -38,9 +43,11 @@ type Room struct {
 
 // ScheduleItem defines model for ScheduleItem.
 type ScheduleItem struct {
-	EndTime   *time.Time `json:"end_time,omitempty"`
-	StartTime *time.Time `json:"start_time,omitempty"`
-	Type      *string    `json:"type,omitempty"`
+	EndTime      *time.Time `json:"end_time,omitempty"`
+	GroupNumbers *[]string  `json:"group_numbers,omitempty"`
+	StartTime    *time.Time `json:"start_time,omitempty"`
+	Teacher      *string    `json:"teacher,omitempty"`
+	Type         *string    `json:"type,omitempty"`
 }
 
 // PostBookingJSONRequestBody defines body for PostBooking for application/json ContentType.
@@ -51,6 +58,9 @@ type ServerInterface interface {
 	// Создать бронирование
 	// (POST /booking)
 	PostBooking(w http.ResponseWriter, r *http.Request)
+	// Получить бронирования текущего пользователя
+	// (GET /booking/my)
+	GetBookingMy(w http.ResponseWriter, r *http.Request)
 	// Отменить бронирование
 	// (DELETE /booking/{id})
 	DeleteBookingId(w http.ResponseWriter, r *http.Request, id int)
@@ -74,8 +84,34 @@ type MiddlewareFunc func(http.Handler) http.Handler
 // PostBooking operation middleware
 func (siw *ServerInterfaceWrapper) PostBooking(w http.ResponseWriter, r *http.Request) {
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostBooking(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBookingMy operation middleware
+func (siw *ServerInterfaceWrapper) GetBookingMy(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBookingMy(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -98,6 +134,12 @@ func (siw *ServerInterfaceWrapper) DeleteBookingId(w http.ResponseWriter, r *htt
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteBookingId(w, r, id)
@@ -270,6 +312,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("POST "+options.BaseURL+"/booking", wrapper.PostBooking)
+	m.HandleFunc("GET "+options.BaseURL+"/booking/my", wrapper.GetBookingMy)
 	m.HandleFunc("DELETE "+options.BaseURL+"/booking/{id}", wrapper.DeleteBookingId)
 	m.HandleFunc("GET "+options.BaseURL+"/rooms", wrapper.GetRooms)
 	m.HandleFunc("GET "+options.BaseURL+"/rooms/{id}", wrapper.GetRoomsId)

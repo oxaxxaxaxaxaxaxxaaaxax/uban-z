@@ -9,6 +9,7 @@ import (
 	bookingserver "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/booking/bookingserver"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/booking/domain"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/booking/service"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/platform/httpx"
 )
 
 // Handler implements the generated booking HTTP server interface.
@@ -45,6 +46,11 @@ func (h *Handler) GetRoomsId(w http.ResponseWriter, r *http.Request, id int) {
 }
 
 func (h *Handler) PostBooking(w http.ResponseWriter, r *http.Request) {
+	identity, ok := httpx.RequireIdentity(w, r)
+	if !ok {
+		return
+	}
+
 	var request bookingserver.CreateBookingRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		writeError(w, errInvalidRequest)
@@ -52,6 +58,11 @@ func (h *Handler) PostBooking(w http.ResponseWriter, r *http.Request) {
 	}
 
 	booking, err := h.useCase.CreateBooking(r.Context(), service.CreateBookingInput{
+		Caller: service.Caller{
+			UserID: identity.UserID,
+			Login:  identity.Login,
+			Role:   identity.Role,
+		},
 		RoomID:    request.RoomId,
 		StartTime: request.StartTime,
 		EndTime:   request.EndTime,
@@ -71,20 +82,51 @@ func (h *Handler) PostBooking(w http.ResponseWriter, r *http.Request) {
 	h.logger.InfoContext(r.Context(), "booking.created",
 		slog.Int("booking_id", booking.ID),
 		slog.Int("room_id", booking.RoomID),
-		slog.Time("start_time", booking.StartTime),
-		slog.Time("end_time", booking.EndTime),
+		slog.Int("user_id", booking.UserID),
+		slog.String("creator_role", string(booking.CreatorRole)),
 	)
 	writeJSON(w, http.StatusOK, mapBooking(booking))
 }
 
+func (h *Handler) GetBookingMy(w http.ResponseWriter, r *http.Request) {
+	identity, ok := httpx.RequireIdentity(w, r)
+	if !ok {
+		return
+	}
+
+	bookings, err := h.useCase.ListMyBookings(r.Context(), service.Caller{
+		UserID: identity.UserID,
+		Login:  identity.Login,
+		Role:   identity.Role,
+	})
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, mapBookings(bookings))
+}
+
 func (h *Handler) DeleteBookingId(w http.ResponseWriter, r *http.Request, id int) {
-	if err := h.useCase.CancelBooking(r.Context(), id); err != nil {
+	identity, ok := httpx.RequireIdentity(w, r)
+	if !ok {
+		return
+	}
+
+	err := h.useCase.CancelBooking(r.Context(), id, service.Caller{
+		UserID: identity.UserID,
+		Login:  identity.Login,
+		Role:   identity.Role,
+	})
+	if err != nil {
 		writeError(w, err)
 		return
 	}
 
 	h.logger.InfoContext(r.Context(), "booking.cancelled",
 		slog.Int("booking_id", id),
+		slog.Int("cancelled_by_user_id", identity.UserID),
+		slog.String("cancelled_by_role", string(identity.Role)),
 	)
 	w.WriteHeader(http.StatusOK)
 }

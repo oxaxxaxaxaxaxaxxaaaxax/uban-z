@@ -17,6 +17,7 @@ type Config struct {
 	EventsEnabled    bool          `env:"EVENTS_ENABLED" env-default:"false"`
 	RabbitMQURL      string        `env:"RABBITMQ_URL"`
 	RabbitMQExchange string        `env:"RABBITMQ_EXCHANGE" env-default:"booking.events"`
+	JWTSecret        string        `env:"JWT_SECRET"`
 }
 
 func Load() (Config, error) {
@@ -51,6 +52,10 @@ func (c Config) Validate() error {
 
 	if c.EventsEnabled && c.RabbitMQURL == "" {
 		return errors.New("EVENTS_ENABLED=true requires RABBITMQ_URL")
+	}
+
+	if c.JWTSecret == "" {
+		return errors.New("JWT_SECRET is required")
 	}
 
 	return nil

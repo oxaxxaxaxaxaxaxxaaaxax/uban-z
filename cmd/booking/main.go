@@ -60,6 +60,7 @@ func main() {
 
 	router := httpx.Chain(
 		bookingserver.Handler(handler),
+		httpx.ParseToken([]byte(cfg.JWTSecret)),
 		httpx.RequestID,
 		httpx.RecoverPanic(logger),
 		httpx.AccessLog(logger),
