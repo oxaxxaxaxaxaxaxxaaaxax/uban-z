@@ -2,23 +2,27 @@ openapi: 3.1.0
 info:
   title: API Gateway
   version: 1.0.0
-  description: Reverse proxy для маршрутизации запросов к сервисам. Маршруты доступны как в виде `/auth`, `/users`, `/rooms`, `/booking`, так и через алиасы с префиксом `/api`.
+  description: Reverse proxy для маршрутизации запросов к сервисам
 
 paths:
-  /healthz:
-    get:
-      summary: Healthcheck API Gateway
-      responses:
-        '200':
-          description: Gateway работает
 
   # AUTH SERVICE
   /auth/register:
     post:
       summary: Proxy to Auth Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
         '200':
           description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
         '400':
           description: Некорректные данные
         '500':
@@ -27,150 +31,38 @@ paths:
   /auth/login:
     post:
       summary: Proxy to Auth Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
           description: Успешная авторизация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
         '401':
           description: Неверный login или пароль
         '500':
           description: Внутренняя ошибка сервера
 
-  /users:
+  /auth/me:
     get:
-      summary: Proxy to Auth Service - list users
+      summary: Proxy to Auth Service
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
-          description: Список пользователей
-        '401':
-          description: JWT не передан или недействителен
-        '403':
-          description: Доступ разрешён только admin
-        '500':
-          description: Внутренняя ошибка сервера
-
-  /users/me:
-    get:
-      summary: Proxy to Auth Service - get current user
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Текущий пользователь
-        '401':
-          description: JWT не передан или недействителен
-        '404':
-          description: Пользователь не найден
-        '500':
-          description: Внутренняя ошибка сервера
-
-    put:
-      summary: Proxy to Auth Service - update current user
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Пользователь обновлён
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
         '400':
-          description: Некорректные данные запроса
-        '401':
-          description: JWT не передан или недействителен
-        '403':
-          description: Поле role можно менять только через admin endpoint
-        '404':
-          description: Пользователь не найден
-        '409':
-          description: Новый login уже занят
-        '500':
-          description: Внутренняя ошибка сервера
-
-    delete:
-      summary: Proxy to Auth Service - delete current user
-      security:
-        - bearerAuth: []
-      responses:
-        '204':
-          description: Пользователь удалён
-        '401':
-          description: JWT не передан или недействителен
-        '404':
-          description: Пользователь не найден
-        '500':
-          description: Внутренняя ошибка сервера
-
-  /users/{id}:
-    get:
-      summary: Proxy to Auth Service - get user by ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Пользователь найден
-        '400':
-          description: Некорректный id
-        '401':
-          description: JWT не передан или недействителен
-        '403':
-          description: Доступ разрешён только admin
-        '404':
-          description: Пользователь не найден
-        '500':
-          description: Внутренняя ошибка сервера
-
-    put:
-      summary: Proxy to Auth Service - update user by ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Пользователь обновлён
-        '400':
-          description: Некорректные данные запроса
-        '401':
-          description: JWT не передан или недействителен
-        '403':
-          description: Доступ разрешён только admin
-        '404':
-          description: Пользователь не найден
-        '409':
-          description: Новый login уже занят
-        '500':
-          description: Внутренняя ошибка сервера
-
-    delete:
-      summary: Proxy to Auth Service - delete user by ID
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Пользователь удалён
-        '400':
-          description: Некорректный id
-        '401':
-          description: JWT не передан или недействителен
-        '403':
-          description: Доступ разрешён только admin
-        '404':
-          description: Пользователь не найден
+          description: Некорректные данные
         '500':
           description: Внутренняя ошибка сервера
 
@@ -181,6 +73,12 @@ paths:
       responses:
         '200':
           description: Список аудиторий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
         '500':
           description: Внутренняя ошибка сервера
 
@@ -196,6 +94,12 @@ paths:
       responses:
         '200':
           description: Расписание аудитории
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleItem'
         '404':
           description: Аудитория не найдена
         '500':
@@ -204,11 +108,25 @@ paths:
   /booking:
     post:
       summary: Proxy to Booking Service
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
       responses:
         '200':
           description: Бронирование создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
         '400':
           description: Некорректные данные запроса
+        '401':
+          description: Пользователь не авторизован
         '404':
           description: Аудитория не найдена
         '409':
@@ -219,6 +137,8 @@ paths:
   /booking/{id}:
     delete:
       summary: Proxy to Booking Service
+      security:
+        - bearerAuth: [ ]
       parameters:
         - name: id
           in: path
@@ -228,14 +148,141 @@ paths:
       responses:
         '200':
           description: Бронирование отменено
+        '401':
+          description: Пользователь не авторизован
         '404':
           description: Бронирование не найдено
         '500':
           description: Внутренняя ошибка сервера
 
+  /booking/my:
+    get:
+      summary: Proxy to Booking Service
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Список бронирований пользователя
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '401':
+          description: Пользователь не авторизован
+        '500':
+          description: Внутренняя ошибка сервера
+
+
 components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        login:
+          type: string
+
+    RegisterRequest:
+      type: object
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+        full_name:
+          type: string
+      required:
+        - login
+        - password
+        - role
+        - full_name
+
+    LoginRequest:
+      type: object
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+      required:
+        - login
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        room_id:
+          type: integer
+        start_time:
+          type: string
+        end_time:
+          type: string
+
+    ScheduleItem:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        type:
+          type: string
+        teacher:
+          type: string
+        group_numbers:
+          type: array
+          items:
+            type: string
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        capacity:
+          type: integer
+        building:
+          type: string
+
+    CreateBookingRequest:
+      type: object
+      properties:
+        room_id:
+          type: integer
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+      required:
+        - room_id
+        - start_time
+        - end_time
+
+
+
+
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+
+
