@@ -23,6 +23,8 @@ paths:
                 $ref: '#/components/schemas/UserResponse'
         '400':
           description: Некорректные данные
+        '409':
+          description: Пользователь с таким логином уже существует
         '500':
           description: Внутренняя ошибка сервера
 
@@ -47,6 +49,25 @@ paths:
         '500':
           description: Внутренняя ошибка сервера
 
+  /auth/me:
+    get:
+      summary: Получить информацию о текущем пользователе
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+        '400':
+          description: Некорректные данные
+
+        '500':
+          description: Внутренняя ошибка сервера
+
 components:
   schemas:
 
@@ -59,10 +80,13 @@ components:
           type: string
         role:
           type: string
+        full_name:
+          type: string
       required:
         - login
         - password
         - role
+        - full_name
 
     LoginRequest:
       type: object
