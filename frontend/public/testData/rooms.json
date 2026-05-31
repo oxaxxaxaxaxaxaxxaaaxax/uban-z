@@ -1,0 +1,32 @@
+[
+    {
+        "id": 1,
+        "name": "0204",
+        "capacity": 100,
+        "building": "Новый корпус"
+    },
+    {
+        "id": 2,
+        "name": "3107",
+        "capacity": 310,
+        "building": "Новый корпус"
+    },
+    {
+        "id": 3,
+        "name": "т3212",
+        "capacity": 15,
+        "building": "Новый корпус"
+    },
+    {
+        "id": 4,
+        "name": "312 ГК",
+        "capacity": 20,
+        "building": "Главный корпус"
+    },
+    {
+        "id": 5,
+        "name": "2348",
+        "capacity": 30,
+        "building": "Новый корпус"
+    }
+]

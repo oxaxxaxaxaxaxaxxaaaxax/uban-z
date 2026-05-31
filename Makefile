@@ -39,6 +39,7 @@ test-all: test test-integration
 
 vet:
 	@go vet $(BOOKING_PKGS)
+
 .PHONY: migrate-up migrate-down migrate-status auth-migrate-up auth-migrate-down auth-migrate-status sqlc-generate
 
 migrate-up:

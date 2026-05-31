@@ -1,0 +1,183 @@
+.empty {
+    text-align: center;
+    padding: 40px 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    margin: 20px 0;
+
+    .createBtn {
+        margin-top: 16px;
+        background-color: #72C81F !important;
+        color: #000000 !important;
+        font-weight: 600 !important;
+        text-transform: none !important;
+        padding: 10px 24px !important;
+        border-radius: 8px !important;
+
+        &:hover {
+            background-color: #5da81a !important;
+        }
+    }
+}
+
+.notification {
+    margin-bottom: 16px;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+
+    :global(.MuiAlert-root) {
+        border-radius: 8px;
+    }
+
+    :global(.MuiAlert-standardSuccess) {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    :global(.MuiAlert-standardError) {
+        background-color: #ffebee;
+        color: #c62828;
+    }
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.card {
+    background: #edfdde !important;
+    border: 3px solid #559619;
+    border-radius: 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cardContent {
+    padding: 20px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.roomName {
+    font-weight: 600 !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    font-size: 1.5rem !important;
+    line-height: 1 !important;
+}
+
+.building {
+    color: #666;
+    font-size: 1rem;
+    font-style: italic;
+    flex-shrink: 0;
+}
+
+/* Время бронирования */
+.timeInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.timeLabel {
+    color: #333 !important;
+    font-size: 1.2rem !important;
+    line-height: 1 !important;
+}
+
+/* Кнопки действий */
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.cancelBtn {
+    border-color: #d32f2f !important;
+    color: #d32f2f !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    padding: 8px 25px !important;
+
+    &:hover {
+        border-color: #b71c1c !important;
+        background-color: #ffebee !important;
+    }
+
+    &:disabled {
+        border-color: #ccc !important;
+        color: #999 !important;
+        cursor: not-allowed;
+    }
+}
+
+.dialog {
+    :global(.MuiDialog-paper) {
+        border-radius: 12px;
+        border: 2px solid #000000;
+        max-width: 600px;
+        width: 90%;
+    }
+
+    :global(.MuiDialogTitle-root) {
+        font-weight: 600 !important;
+        font-size: 1.25rem !important;
+        color: #000000 !important;
+        padding: 20px 24px 12px !important;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    :global(.MuiDialogContent-root) {
+        padding: 16px 24px !important;
+        color: #333 !important;
+        font-size: 1rem !important;
+        line-height: 1.5 !important;
+
+        strong {
+            color: #000000;
+            font-weight: 600;
+        }
+    }
+
+    :global(.MuiDialogActions-root) {
+        padding: 12px 24px 20px !important;
+        gap: 12px;
+        border-top: 1px solid #f0f0f0;
+    }
+}
+
+.dialogActions {
+    :global(.MuiButton-root) {
+        text-transform: none !important;
+        font-weight: 600 !important;
+        padding: 8px 20px !important;
+        border-radius: 8px !important;
+    }
+
+    :global(.MuiButton-containedError) {
+        background-color: #d32f2f !important;
+        color: #ffffff !important;
+
+        &:hover {
+            background-color: #b71c1c !important;
+        }
+
+        &:disabled {
+            background-color: #ef9a9a !important;
+            color: #ffffff !important;
+        }
+    }
+}
