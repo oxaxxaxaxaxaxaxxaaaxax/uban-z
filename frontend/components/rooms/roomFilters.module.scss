@@ -1,0 +1,144 @@
+.container {
+    background: #ffffff;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.searchWrapper {
+    width: 100%;
+}
+
+.searchField {
+    background-color: #fafafa;
+    border-radius: 8px;
+
+    :global(.MuiOutlinedInput-root) {
+        border-radius: 8px;
+        background-color: #fafafa;
+
+        fieldset {
+            border-color: #ddd;
+            border-width: 1px;
+        }
+
+        &:hover fieldset {
+            border-color: #000000;
+        }
+
+        &.Mui-focused fieldset {
+            border-color: #000000;
+            border-width: 2px;
+        }
+
+        input {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            color: #333;
+
+            &::placeholder {
+                color: #999;
+            }
+        }
+    }
+
+    :global(.MuiInputAdornment-positionStart) {
+        color: #000000 !important;
+        margin-right: 4px;
+    }
+
+    :global(.MuiInputAdornment-positionEnd) {
+        margin-left: 4px;
+    }
+
+    :global(.MuiIconButton-root) {
+        color: #666;
+        padding: 4px;
+    }
+}
+
+.searchIcon {
+    color: #999 !important;
+    font-size: 20px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.control {
+    min-width: 140px;
+    flex: 1;
+    background-color: #fff;
+
+    :global(.MuiOutlinedInput-root) {
+        border-radius: 6px;
+        background-color: #fff;
+        font-size: 0.9rem;
+        min-height: 40px;
+
+        &:hover .MuiOutlinedInput-notchedOutline {
+            border-color: #72C81F;
+        }
+
+        &.Mui-focused .MuiOutlinedInput-notchedOutline {
+            border-color: #72C81F;
+        }
+    }
+
+    :global(.MuiInputLabel-root) {
+        font-size: 0.9rem;
+        color: #666;
+
+        &.Mui-focused {
+            color: #72C81F;
+        }
+    }
+
+    :global(.MuiSelect-select) {
+        padding: 8px 12px;
+        color: #333;
+    }
+
+    :global(.MuiSvgIcon-root) {
+        color: #72C81F;
+        font-size: 20px;
+    }
+
+    :global(.MuiMenuItem-root) {
+        font-size: 0.9rem;
+        color: #333;
+
+        &:hover {
+            background-color: #f5f5f5;
+        }
+
+        &.Mui-selected {
+            background-color: #e8f5e9;
+            color: #72C81F;
+            font-weight: 500;
+
+            &:hover {
+                background-color: #dcedc8;
+            }
+        }
+    }
+}
+
+.resetBtn {
+    color: #666;
+    margin-left: auto;
+    padding: 6px;
+    transition: color 0.2s, background-color 0.2s;
+
+    :global(.MuiSvgIcon-root) {
+        font-size: 18px;
+    }
+}
