@@ -28,13 +28,33 @@ func mapRoom(room domain.Room) bookingserver.Room {
 func mapSchedule(schedule []domain.ScheduleItem) []bookingserver.ScheduleItem {
 	response := make([]bookingserver.ScheduleItem, 0, len(schedule))
 	for _, item := range schedule {
-		response = append(response, bookingserver.ScheduleItem{
-			EndTime:   ptr(item.EndTime),
-			StartTime: ptr(item.StartTime),
-			Type:      ptr(item.Type),
-		})
+		response = append(response, mapScheduleItem(item))
 	}
 
+	return response
+}
+
+func mapScheduleItem(item domain.ScheduleItem) bookingserver.ScheduleItem {
+	out := bookingserver.ScheduleItem{
+		EndTime:   ptr(item.EndTime),
+		StartTime: ptr(item.StartTime),
+		Type:      ptr(item.Type),
+	}
+	if item.Teacher != "" {
+		out.Teacher = ptr(item.Teacher)
+	}
+	if len(item.GroupNumbers) > 0 {
+		groups := append([]string(nil), item.GroupNumbers...)
+		out.GroupNumbers = &groups
+	}
+	return out
+}
+
+func mapBookings(bookings []domain.Booking) []bookingserver.Booking {
+	response := make([]bookingserver.Booking, 0, len(bookings))
+	for _, b := range bookings {
+		response = append(response, mapBooking(b))
+	}
 	return response
 }
 

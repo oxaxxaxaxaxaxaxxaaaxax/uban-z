@@ -128,6 +128,22 @@ func (f *fakeRepo) ListByRoomID(ctx context.Context, roomID int) ([]domain.Booki
 	return out, nil
 }
 
+func (f *fakeRepo) ListByUserID(ctx context.Context, userID int) ([]domain.Booking, error) {
+	_ = ctx
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	out := make([]domain.Booking, 0)
+	for _, b := range f.bookings {
+		if b.UserID == userID {
+			out = append(out, b)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].StartTime.Before(out[j].StartTime) })
+
+	return out, nil
+}
+
 func (f *fakeRepo) GetBookingByID(ctx context.Context, id int) (domain.Booking, error) {
 	_ = ctx
 	f.mu.Lock()
@@ -250,6 +266,99 @@ func TestService_GetRoomSchedule(t *testing.T) {
 		}
 		if len(got) != 0 {
 			t.Fatalf("len = %d, want 0", len(got))
+		}
+	})
+
+	t.Run("propagates teacher and group_numbers from parser rows", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.rooms[1] = domain.Room{ID: 1, Name: "A"}
+		start := time.Date(2026, time.April, 17, 9, 0, 0, 0, time.UTC)
+		repo.bookings[10] = domain.Booking{
+			ID:           10,
+			RoomID:       1,
+			UserID:       0,
+			CreatorRole:  domain.RoleAdmin,
+			StartTime:    start,
+			EndTime:      start.Add(time.Hour),
+			Teacher:      "Ivanov I.I.",
+			GroupNumbers: []string{"BVT2101", "BVT2102"},
+		}
+		svc := service.New(repo, repo, nil)
+
+		got, err := svc.GetRoomSchedule(context.Background(), 1)
+		if err != nil {
+			t.Fatalf("err = %v", err)
+		}
+		if len(got) != 1 {
+			t.Fatalf("len = %d, want 1", len(got))
+		}
+		if got[0].Teacher != "Ivanov I.I." {
+			t.Errorf("teacher = %q, want %q", got[0].Teacher, "Ivanov I.I.")
+		}
+		if len(got[0].GroupNumbers) != 2 || got[0].GroupNumbers[0] != "BVT2101" {
+			t.Errorf("group_numbers = %v", got[0].GroupNumbers)
+		}
+	})
+}
+
+func TestService_ListMyBookings(t *testing.T) {
+	t.Parallel()
+
+	base := time.Date(2026, time.April, 17, 9, 0, 0, 0, time.UTC)
+
+	t.Run("returns only caller's bookings", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[1] = domain.Booking{ID: 1, RoomID: 1, UserID: 1, CreatorRole: domain.RoleStudentB, StartTime: base, EndTime: base.Add(time.Hour)}
+		repo.bookings[2] = domain.Booking{ID: 2, RoomID: 1, UserID: 2, CreatorRole: domain.RoleStudentB, StartTime: base.Add(2 * time.Hour), EndTime: base.Add(3 * time.Hour)}
+		repo.bookings[3] = domain.Booking{ID: 3, RoomID: 2, UserID: 1, CreatorRole: domain.RoleStudentB, StartTime: base.Add(4 * time.Hour), EndTime: base.Add(5 * time.Hour)}
+		svc := service.New(repo, repo, nil)
+
+		got, err := svc.ListMyBookings(context.Background(), defaultCaller())
+		if err != nil {
+			t.Fatalf("err = %v", err)
+		}
+		if len(got) != 2 {
+			t.Fatalf("len = %d, want 2 (caller owns 1 and 3)", len(got))
+		}
+		for _, b := range got {
+			if b.UserID != 1 {
+				t.Errorf("booking %d has UserID=%d, want 1", b.ID, b.UserID)
+			}
+		}
+	})
+
+	t.Run("returns empty slice when caller has no bookings", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[1] = domain.Booking{ID: 1, RoomID: 1, UserID: 99, CreatorRole: domain.RoleStudentB}
+		svc := service.New(repo, repo, nil)
+
+		got, err := svc.ListMyBookings(context.Background(), defaultCaller())
+		if err != nil {
+			t.Fatalf("err = %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected non-nil empty slice")
+		}
+		if len(got) != 0 {
+			t.Fatalf("len = %d, want 0", len(got))
+		}
+	})
+
+	t.Run("returns ErrForbidden for unknown role", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		svc := service.New(repo, repo, nil)
+
+		_, err := svc.ListMyBookings(context.Background(), service.Caller{UserID: 1, Role: domain.Role("ghost")})
+		if !errors.Is(err, domain.ErrForbidden) {
+			t.Fatalf("err = %v, want ErrForbidden", err)
 		}
 	})
 }
@@ -452,6 +561,47 @@ func TestService_CancelBooking(t *testing.T) {
 
 		if err := svc.CancelBooking(context.Background(), 1, admin); err != nil {
 			t.Fatalf("err = %v", err)
+		}
+	})
+
+	t.Run("admin cancels parser row (creator_role=admin)", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[1] = domain.Booking{
+			ID:          1,
+			RoomID:      1,
+			UserID:      0,
+			CreatorRole: domain.RoleAdmin,
+			Teacher:     "Ivanov I.I.",
+		}
+		svc := service.New(repo, repo, nil)
+		admin := service.Caller{UserID: 100, Login: "root", Role: domain.RoleAdmin}
+
+		if err := svc.CancelBooking(context.Background(), 1, admin); err != nil {
+			t.Fatalf("err = %v", err)
+		}
+		if _, ok := repo.bookings[1]; ok {
+			t.Fatal("parser row still present after admin cancel")
+		}
+	})
+
+	t.Run("teacher cannot cancel parser row", func(t *testing.T) {
+		t.Parallel()
+
+		repo := newFakeRepo()
+		repo.bookings[1] = domain.Booking{
+			ID:          1,
+			RoomID:      1,
+			UserID:      0,
+			CreatorRole: domain.RoleAdmin,
+		}
+		svc := service.New(repo, repo, nil)
+		teacher := service.Caller{UserID: 7, Login: "prof", Role: domain.RoleTeacher}
+
+		err := svc.CancelBooking(context.Background(), 1, teacher)
+		if !errors.Is(err, domain.ErrForbidden) {
+			t.Fatalf("err = %v, want ErrForbidden", err)
 		}
 	})
 }

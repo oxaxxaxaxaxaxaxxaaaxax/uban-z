@@ -14,7 +14,7 @@ import (
 const createBooking = `-- name: CreateBooking :one
 INSERT INTO bookings (room_id, user_id, creator_role, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, room_id, user_id, creator_role, start_time, end_time, created_at
+RETURNING id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, created_at
 `
 
 type CreateBookingParams struct {
@@ -25,7 +25,19 @@ type CreateBookingParams struct {
 	EndTime     pgtype.Timestamptz
 }
 
-func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (Booking, error) {
+type CreateBookingRow struct {
+	ID           int64
+	RoomID       int64
+	UserID       int64
+	CreatorRole  string
+	StartTime    pgtype.Timestamptz
+	EndTime      pgtype.Timestamptz
+	Teacher      pgtype.Text
+	GroupNumbers []string
+	CreatedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (CreateBookingRow, error) {
 	row := q.db.QueryRow(ctx, createBooking,
 		arg.RoomID,
 		arg.UserID,
@@ -33,7 +45,7 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 		arg.StartTime,
 		arg.EndTime,
 	)
-	var i Booking
+	var i CreateBookingRow
 	err := row.Scan(
 		&i.ID,
 		&i.RoomID,
@@ -41,6 +53,8 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 		&i.CreatorRole,
 		&i.StartTime,
 		&i.EndTime,
+		&i.Teacher,
+		&i.GroupNumbers,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -60,14 +74,26 @@ func (q *Queries) DeleteBooking(ctx context.Context, id int64) (int64, error) {
 }
 
 const getBookingByID = `-- name: GetBookingByID :one
-SELECT id, room_id, user_id, creator_role, start_time, end_time, created_at
+SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, created_at
 FROM bookings
 WHERE id = $1
 `
 
-func (q *Queries) GetBookingByID(ctx context.Context, id int64) (Booking, error) {
+type GetBookingByIDRow struct {
+	ID           int64
+	RoomID       int64
+	UserID       int64
+	CreatorRole  string
+	StartTime    pgtype.Timestamptz
+	EndTime      pgtype.Timestamptz
+	Teacher      pgtype.Text
+	GroupNumbers []string
+	CreatedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) GetBookingByID(ctx context.Context, id int64) (GetBookingByIDRow, error) {
 	row := q.db.QueryRow(ctx, getBookingByID, id)
-	var i Booking
+	var i GetBookingByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.RoomID,
@@ -75,6 +101,8 @@ func (q *Queries) GetBookingByID(ctx context.Context, id int64) (Booking, error)
 		&i.CreatorRole,
 		&i.StartTime,
 		&i.EndTime,
+		&i.Teacher,
+		&i.GroupNumbers,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -100,21 +128,33 @@ func (q *Queries) GetRoomByID(ctx context.Context, id int64) (Room, error) {
 }
 
 const listBookingsByRoomID = `-- name: ListBookingsByRoomID :many
-SELECT id, room_id, user_id, creator_role, start_time, end_time, created_at
+SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, created_at
 FROM bookings
 WHERE room_id = $1
 ORDER BY start_time, id
 `
 
-func (q *Queries) ListBookingsByRoomID(ctx context.Context, roomID int64) ([]Booking, error) {
+type ListBookingsByRoomIDRow struct {
+	ID           int64
+	RoomID       int64
+	UserID       int64
+	CreatorRole  string
+	StartTime    pgtype.Timestamptz
+	EndTime      pgtype.Timestamptz
+	Teacher      pgtype.Text
+	GroupNumbers []string
+	CreatedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) ListBookingsByRoomID(ctx context.Context, roomID int64) ([]ListBookingsByRoomIDRow, error) {
 	rows, err := q.db.Query(ctx, listBookingsByRoomID, roomID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Booking{}
+	items := []ListBookingsByRoomIDRow{}
 	for rows.Next() {
-		var i Booking
+		var i ListBookingsByRoomIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.RoomID,
@@ -122,6 +162,57 @@ func (q *Queries) ListBookingsByRoomID(ctx context.Context, roomID int64) ([]Boo
 			&i.CreatorRole,
 			&i.StartTime,
 			&i.EndTime,
+			&i.Teacher,
+			&i.GroupNumbers,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBookingsByUserID = `-- name: ListBookingsByUserID :many
+SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, created_at
+FROM bookings
+WHERE user_id = $1
+ORDER BY start_time, id
+`
+
+type ListBookingsByUserIDRow struct {
+	ID           int64
+	RoomID       int64
+	UserID       int64
+	CreatorRole  string
+	StartTime    pgtype.Timestamptz
+	EndTime      pgtype.Timestamptz
+	Teacher      pgtype.Text
+	GroupNumbers []string
+	CreatedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) ListBookingsByUserID(ctx context.Context, userID int64) ([]ListBookingsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, listBookingsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListBookingsByUserIDRow{}
+	for rows.Next() {
+		var i ListBookingsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RoomID,
+			&i.UserID,
+			&i.CreatorRole,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Teacher,
+			&i.GroupNumbers,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

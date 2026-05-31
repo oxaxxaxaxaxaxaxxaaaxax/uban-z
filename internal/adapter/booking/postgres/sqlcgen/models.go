@@ -9,13 +9,15 @@ import (
 )
 
 type Booking struct {
-	ID          int64
-	RoomID      int64
-	UserID      int64
-	CreatorRole string
-	StartTime   pgtype.Timestamptz
-	EndTime     pgtype.Timestamptz
-	CreatedAt   pgtype.Timestamptz
+	ID           int64
+	RoomID       int64
+	UserID       int64
+	CreatorRole  string
+	StartTime    pgtype.Timestamptz
+	EndTime      pgtype.Timestamptz
+	CreatedAt    pgtype.Timestamptz
+	Teacher      pgtype.Text
+	GroupNumbers []string
 }
 
 type Room struct {

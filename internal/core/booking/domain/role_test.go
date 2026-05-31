@@ -40,13 +40,15 @@ func TestRole_CanCancelOther(t *testing.T) {
 
 	cases := []pair{
 		{domain.RoleAdmin, domain.RoleTeacher, true},
-		{domain.RoleAdmin, domain.RoleAdmin, false}, // equal rank
+		{domain.RoleAdmin, domain.RoleAdmin, true}, // admin bypass: can cancel parser rows
 		{domain.RoleTeacher, domain.RoleStudentA, true},
 		{domain.RoleStudentA, domain.RoleStudentM, true},
 		{domain.RoleStudentM, domain.RoleStudentB, true},
+		{domain.RoleTeacher, domain.RoleTeacher, false},   // equal rank, non-admin
 		{domain.RoleStudentB, domain.RoleStudentB, false}, // equal rank
 		{domain.RoleStudentB, domain.RoleAdmin, false},    // lower vs higher
 		{domain.RoleStudentM, domain.RoleTeacher, false},
+		{domain.RoleTeacher, domain.RoleAdmin, false}, // teacher cannot cancel parser/admin row
 		{domain.Role("garbage"), domain.RoleStudentB, false},
 		{domain.RoleAdmin, domain.Role("garbage"), false},
 	}

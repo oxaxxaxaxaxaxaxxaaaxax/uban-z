@@ -209,6 +209,58 @@ func TestE2E_WriteEndpointsRequireToken(t *testing.T) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("DELETE without token = %d, want 401", resp.StatusCode)
 	}
+
+	resp, _ = doJSON(t, http.MethodGet, srv.URL+"/booking/my", "", nil)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("GET /booking/my without token = %d, want 401", resp.StatusCode)
+	}
+}
+
+func TestE2E_GetBookingMy(t *testing.T) {
+	srv := bootServer(t)
+
+	alice := mintToken(t, 30, "alice", domain.RoleStudentB)
+	bob := mintToken(t, 31, "bob", domain.RoleStudentB)
+	base := time.Date(2026, time.October, 1, 9, 0, 0, 0, time.UTC)
+
+	create := func(token string, roomID int, start, end time.Time) {
+		t.Helper()
+		resp, body := doJSON(t, http.MethodPost, srv.URL+"/booking", token, map[string]any{
+			"room_id":    roomID,
+			"start_time": start.Format(time.RFC3339),
+			"end_time":   end.Format(time.RFC3339),
+		})
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("create status = %d; body=%s", resp.StatusCode, body)
+		}
+	}
+
+	create(alice, 1, base, base.Add(time.Hour))
+	create(alice, 2, base.Add(2*time.Hour), base.Add(3*time.Hour))
+	create(bob, 1, base.Add(4*time.Hour), base.Add(5*time.Hour))
+
+	resp, body := doJSON(t, http.MethodGet, srv.URL+"/booking/my", alice, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /booking/my = %d; body=%s", resp.StatusCode, body)
+	}
+	var bookings []bookingserver.Booking
+	if err := json.Unmarshal(body, &bookings); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(bookings) != 2 {
+		t.Fatalf("alice has %d bookings, want 2", len(bookings))
+	}
+
+	resp, body = doJSON(t, http.MethodGet, srv.URL+"/booking/my", bob, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /booking/my (bob) = %d; body=%s", resp.StatusCode, body)
+	}
+	if err := json.Unmarshal(body, &bookings); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(bookings) != 1 {
+		t.Fatalf("bob has %d bookings, want 1", len(bookings))
+	}
 }
 
 func TestE2E_BookingLifecycle(t *testing.T) {
