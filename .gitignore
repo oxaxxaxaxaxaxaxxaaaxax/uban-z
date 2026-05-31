@@ -1,5 +1,6 @@
 .env
 .kilo
+bin/
 .env.local
 .env.*.local
 
