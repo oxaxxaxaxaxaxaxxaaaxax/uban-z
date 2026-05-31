@@ -24,6 +24,8 @@ func writeError(w http.ResponseWriter, err error) {
 		status = http.StatusNotFound
 	case errors.Is(err, domain.ErrScheduleConflict):
 		status = http.StatusConflict
+	case errors.Is(err, domain.ErrForbidden):
+		status = http.StatusForbidden
 	}
 
 	writeJSON(w, status, errorResponse{Error: err.Error()})

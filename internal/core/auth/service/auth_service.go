@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/domain"
 	ports2 "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/ports"
@@ -19,11 +20,23 @@ func NewAuthService(r ports2.UserRepository, jwt ports2.TokenManager) *AuthServi
 	}
 }
 
-func (s *AuthService) Register(login, password, role string) (*domain.User, error) {
+func (s *AuthService) Register(login, password, role, fullName string) (*domain.User, error) {
+	login = strings.TrimSpace(login)
+	role = strings.TrimSpace(role)
+	fullName = strings.TrimSpace(fullName)
+
+	if login == "" || strings.TrimSpace(password) == "" || fullName == "" {
+		return nil, domain.ErrInvalidUserData
+	}
+	if !domain.IsValidRole(role) {
+		return nil, domain.ErrInvalidRole
+	}
+
 	user := &domain.User{
 		Login:    login,
 		Password: password, // позже: hash
 		Role:     role,
+		FullName: fullName,
 	}
 
 	err := s.repo.Create(user)
@@ -35,6 +48,11 @@ func (s *AuthService) Register(login, password, role string) (*domain.User, erro
 }
 
 func (s *AuthService) Login(login, password string) (string, error) {
+	login = strings.TrimSpace(login)
+	if login == "" || strings.TrimSpace(password) == "" {
+		return "", errors.New("invalid credentials")
+	}
+
 	user, err := s.repo.GetByLogin(login)
 	if err != nil {
 		return "", errors.New("invalid credentials")
@@ -49,35 +67,4 @@ func (s *AuthService) Login(login, password string) (string, error) {
 
 func (s *AuthService) GetUserByID(id int) (*domain.User, error) {
 	return s.repo.GetByID(id)
-}
-
-func (s *AuthService) UpdateUser(id int, login, password, role string) (*domain.User, error) {
-	user, err := s.repo.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	if login != "" {
-		user.Login = login
-	}
-	if password != "" {
-		user.Password = password // позже: hash
-	}
-	if role != "" {
-		user.Role = role
-	}
-
-	if err := s.repo.Update(user); err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-func (s *AuthService) DeleteUser(id int) error {
-	return s.repo.Delete(id)
-}
-
-func (s *AuthService) ListUsers() ([]*domain.User, error) {
-	return s.repo.List()
 }

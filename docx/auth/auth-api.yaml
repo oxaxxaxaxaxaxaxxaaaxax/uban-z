@@ -44,6 +44,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Некорректные данные
         '401':
           description: Неверный login или пароль
         '500':
@@ -64,6 +66,9 @@ paths:
 
         '400':
           description: Некорректные данные
+
+        '401':
+          description: Пользователь не авторизован
 
         '500':
           description: Внутренняя ошибка сервера
@@ -111,4 +116,8 @@ components:
         id:
           type: integer
         login:
+          type: string
+        role:
+          type: string
+        full_name:
           type: string

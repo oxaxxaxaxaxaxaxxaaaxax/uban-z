@@ -73,6 +73,10 @@ services:
       EVENTS_ENABLED: "true"
       RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
       RABBITMQ_EXCHANGE: booking.events
+      
+      # Local dev only — must match auth-service's signing key in any real deployment.
+      JWT_SECRET: "dev-only-secret-replace-me"
+
     ports:
       - "8080:8080"
     depends_on:

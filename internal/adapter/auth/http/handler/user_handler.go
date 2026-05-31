@@ -2,90 +2,61 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
-	"strconv"
 
-	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/service"
+	auth "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/authserver"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/http/middleware"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/domain"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/ports"
 )
 
-type UserHandler struct {
-	service *service.AuthService
+type errorResponse struct {
+	Error string `json:"error"`
 }
 
-func NewUserHandler(s *service.AuthService) *UserHandler {
-	return &UserHandler{service: s}
+func requireAuthenticated(w http.ResponseWriter, r *http.Request) (*ports.Claims, bool) {
+	claims, ok := middleware.ClaimsFromContext(r.Context())
+	if !ok {
+		writeStatusError(w, http.StatusUnauthorized, "missing token claims")
+		return nil, false
+	}
+	return claims, true
 }
 
-// GET /users
-func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := h.service.ListUsers()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+func toUserResponse(user *domain.User) auth.UserResponse {
+	id := user.ID
+	login := user.Login
+	role := user.Role
+	fullName := user.FullName
+
+	return auth.UserResponse{
+		Id:       &id,
+		Login:    &login,
+		Role:     &role,
+		FullName: &fullName,
+	}
+}
+
+func writeUserError(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+
+	switch {
+	case errors.Is(err, domain.ErrInvalidRole), errors.Is(err, domain.ErrInvalidUserData), errors.Is(err, domain.ErrUserNotFound):
+		status = http.StatusBadRequest
+	case errors.Is(err, domain.ErrUserAlreadyExists):
+		status = http.StatusConflict
 	}
 
+	writeStatusError(w, status, err.Error())
+}
+
+func writeStatusError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, errorResponse{Error: message})
+}
+
+func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
-}
-
-// GET /users/{id}
-func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-
-	user, err := h.service.GetUserByID(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
-}
-
-// PUT /users/{id}
-func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-
-	var req struct {
-		Login    string `json:"login"`
-		Password string `json:"password"`
-		Role     string `json:"role"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-
-	user, err := h.service.UpdateUser(id, req.Login, req.Password, req.Role)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
-}
-
-// DELETE /users/{id}
-func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.service.DeleteUser(id); err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
 }

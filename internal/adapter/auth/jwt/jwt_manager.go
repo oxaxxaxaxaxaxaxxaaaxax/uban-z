@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -21,6 +22,7 @@ func NewJWTManager(secret string) *JWTManager {
 
 func (j *JWTManager) Generate(user *domain.User) (string, error) {
 	claims := jwt.MapClaims{
+		"sub":     strconv.Itoa(user.ID),
 		"user_id": user.ID,
 		"login":   user.Login,
 		"role":    user.Role,
@@ -53,9 +55,38 @@ func (j *JWTManager) Verify(tokenStr string) (*ports.Claims, error) {
 		return nil, fmt.Errorf("invalid claims type")
 	}
 
+	userID, err := userIDFromClaims(claims)
+	if err != nil {
+		return nil, err
+	}
+	login, ok := claims["login"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid login claim")
+	}
+	role, ok := claims["role"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid role claim")
+	}
+
 	return &ports.Claims{
-		UserID: int(claims["user_id"].(float64)),
-		Login:  claims["login"].(string),
-		Role:   claims["role"].(string),
+		UserID: userID,
+		Login:  login,
+		Role:   role,
 	}, nil
+}
+
+func userIDFromClaims(claims jwt.MapClaims) (int, error) {
+	if sub, ok := claims["sub"].(string); ok && sub != "" {
+		userID, err := strconv.Atoi(sub)
+		if err != nil {
+			return 0, fmt.Errorf("invalid sub claim")
+		}
+		return userID, nil
+	}
+
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return 0, fmt.Errorf("invalid user_id claim")
+	}
+	return int(userID), nil
 }

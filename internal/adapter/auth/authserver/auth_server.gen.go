@@ -23,6 +23,7 @@ type LoginResponse struct {
 
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
+	FullName string `json:"full_name"`
 	Login    string `json:"login"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
@@ -30,8 +31,10 @@ type RegisterRequest struct {
 
 // UserResponse defines model for UserResponse.
 type UserResponse struct {
-	Id    *int    `json:"id,omitempty"`
-	Login *string `json:"login,omitempty"`
+	FullName *string `json:"full_name,omitempty"`
+	Id       *int    `json:"id,omitempty"`
+	Login    *string `json:"login,omitempty"`
+	Role     *string `json:"role,omitempty"`
 }
 
 // PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
@@ -42,6 +45,9 @@ type PostAuthRegisterJSONRequestBody = RegisterRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Получить информацию о текущем пользователе
+	// (GET /auth/me)
+	GetAuthMe(w http.ResponseWriter, r *http.Request)
 	// Авторизация пользователя
 	// (POST /auth/login)
 	PostAuthLogin(w http.ResponseWriter, r *http.Request)
@@ -59,9 +65,21 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// GetAuthMe operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthMe(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PostAuthLogin operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthLogin(w, r)
 	}))
@@ -75,7 +93,6 @@ func (siw *ServerInterfaceWrapper) PostAuthLogin(w http.ResponseWriter, r *http.
 
 // PostAuthRegister operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthRegister(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthRegister(w, r)
 	}))
@@ -188,7 +205,7 @@ func HandlerFromMuxWithBaseURL(si ServerInterface, m ServeMux, baseURL string) h
 	})
 }
 
-// HandlerWithOptions creates http.Handler with additional options
+// HandlerWithOptions creates http.Handler with additional options.
 func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.Handler {
 	m := options.BaseRouter
 
@@ -207,6 +224,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc("GET "+options.BaseURL+"/auth/me", wrapper.GetAuthMe)
 	m.HandleFunc("POST "+options.BaseURL+"/auth/login", wrapper.PostAuthLogin)
 	m.HandleFunc("POST "+options.BaseURL+"/auth/register", wrapper.PostAuthRegister)
 

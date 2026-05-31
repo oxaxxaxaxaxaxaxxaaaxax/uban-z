@@ -2,7 +2,12 @@
 
 We use Goose.
 
-Files are stored in `migrations/`.
+Files are stored in service-specific directories under `migrations/`.
+
+Current directories:
+
+* `migrations/auth`
+* `migrations/booking`
 
 ## Rules
 
