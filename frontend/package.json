@@ -8,7 +8,7 @@
     "gen:parser": "openapi-typescript ../docx/parser/parser-api.yaml -o types/parser.ts",
     "gen:api": "npm run gen:auth && npm run gen:booking && npm run gen:parser",
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },

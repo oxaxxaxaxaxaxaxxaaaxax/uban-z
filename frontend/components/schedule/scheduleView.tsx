@@ -6,8 +6,7 @@ import type { components } from '@/types/booking';
 import { TIME_SLOTS } from '@/lib/time-slots'
 import styles from './scheduleView.module.scss';
 
-// more fiels then in contract
-type ScheduleItem = components['schemas']['ScheduleItem'] & { teacher?: string; groups_number?: string[]; }
+type ScheduleItem = components['schemas']['ScheduleItem'];
 
 interface ScheduleViewProps {
     schedule: ScheduleItem[];
@@ -130,9 +129,9 @@ export default function ScheduleView({ schedule, roomName, onClose }: ScheduleVi
                                                         <Typography className={styles.cellTeacher}>{item.teacher}</Typography>
                                                     )}
 
-                                                    {item.groups_number && item.groups_number.length > 0 && (
+                                                    {item.group_numbers && item.group_numbers.length > 0 && (
                                                         <Typography className={styles.cellGroups}>
-                                                            {item.groups_number.join(', ')}
+                                                            {item.group_numbers.join(', ')}
                                                         </Typography>
                                                     )}
                                                 </Box>

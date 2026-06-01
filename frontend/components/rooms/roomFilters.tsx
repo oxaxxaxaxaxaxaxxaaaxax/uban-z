@@ -3,7 +3,7 @@
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
-import { useState, useEffect, ChangeEvent } from 'react';
+import { ChangeEvent } from 'react';
 import styles from './roomFilters.module.scss';
 
 import type { RoomFilters } from '@/hooks/useFilteredRooms';
@@ -15,21 +15,12 @@ interface RoomFiltersProps {
 }
 
 export default function RoomFilters({value, onChange, availableBuildings = []}: RoomFiltersProps) {
-
-  const [searchInput, setSearchInput] = useState(value.search);
-
-  useEffect(() => {
-    setSearchInput(value.search);
-  }, [value.search]);
-
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setSearchInput(newValue);
     onChange({ ...value, search: newValue });
   };
 
   const handleClearSearch = () => {
-    setSearchInput('');
     onChange({ ...value, search: '' });
   };
 
@@ -42,7 +33,7 @@ export default function RoomFilters({value, onChange, availableBuildings = []}: 
           fullWidth
           size="small"
           placeholder="Поиск аудитории (название, номер)..."
-          value={searchInput}
+          value={value.search}
           onChange={handleSearchChange}
           className={styles.searchField}
           slotProps={{
@@ -50,7 +41,7 @@ export default function RoomFilters({value, onChange, availableBuildings = []}: 
               startAdornment: (
                 <SearchIcon className={styles.searchIcon} />
               ),
-              endAdornment: searchInput ? (
+              endAdornment: value.search ? (
                 <IconButton size="small" onClick={handleClearSearch} edge="end">
                   <CloseIcon fontSize="small" />
                 </IconButton>

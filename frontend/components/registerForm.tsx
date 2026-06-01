@@ -14,6 +14,7 @@ import styles from './authForm.module.scss';
 
 interface RegisterFormInputs {
     login: string;
+    fullName: string;
     password: string;
     confirmPassword: string;
     role: string;
@@ -27,7 +28,7 @@ export default function RegisterForm() {
     const { register, control, handleSubmit, formState: { errors, isValid, isSubmitting }, setError, watch } =
         useForm<RegisterFormInputs>({
             mode: 'onChange',
-            defaultValues: { login: '', password: '', confirmPassword: '', role: '' },
+            defaultValues: { login: '', fullName: '', password: '', confirmPassword: '', role: '' },
         });
 
     const password = watch('password');
@@ -38,7 +39,7 @@ export default function RegisterForm() {
             return;
         }
 
-        const result = await registerUser(data.login, data.password, data.role);
+        const result = await registerUser(data.login, data.password, data.role, data.fullName);
 
         if (!result.success) {
             let message = 'Ошибка регистрации. Проверьте данные.';
@@ -88,6 +89,19 @@ export default function RegisterForm() {
                                 value: /^[a-z]\.[a-z]{2,}\d{0,2}$/,
                                 message: 'Некорректный формат логина'
                             }
+                        })}
+                        fullWidth
+                    />
+
+                    <TextField
+                        className={styles.field}
+                        variant="standard"
+                        label="ФИО"
+                        error={Boolean(errors.fullName?.message)}
+                        helperText={errors.fullName?.message}
+                        {...register('fullName', {
+                            required: 'Введите ФИО',
+                            minLength: { value: 2, message: 'Минимум 2 символа' }
                         })}
                         fullWidth
                     />

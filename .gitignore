@@ -8,6 +8,10 @@ bin/
 
 tmp/
 temp/
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/.npm-cache/
 
 # Test cache
 

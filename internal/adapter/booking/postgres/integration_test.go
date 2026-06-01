@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -87,7 +87,25 @@ func bootPostgres(t *testing.T) *pgxpool.Pool {
 	}
 	t.Cleanup(pool.Close)
 
+	seedIntegrationRooms(t, pool)
+
 	return pool
+}
+
+func seedIntegrationRooms(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+
+	_, err := pool.Exec(context.Background(), `
+		INSERT INTO rooms (name, capacity, building) VALUES
+			('A101', 30, 'НГУ'),
+			('B204', 30, 'НГУ'),
+			('C305', 30, 'НГУ')
+		ON CONFLICT (building, name) DO UPDATE
+		SET capacity = EXCLUDED.capacity
+	`)
+	if err != nil {
+		t.Fatalf("seed integration rooms: %v", err)
+	}
 }
 
 func TestPostgresStore_ListRooms_returnsSeeded(t *testing.T) {
@@ -99,11 +117,17 @@ func TestPostgresStore_ListRooms_returnsSeeded(t *testing.T) {
 		t.Fatalf("List: %v", err)
 	}
 	if len(rooms) != 3 {
-		t.Fatalf("got %d rooms, want 3 (seeded)", len(rooms))
+		t.Fatalf("got %d rooms, want 3 test-seeded", len(rooms))
 	}
 	names := map[string]bool{}
 	for _, r := range rooms {
 		names[r.Name] = true
+		if r.Building == "North" || r.Building == "South" || r.Building == "West" {
+			t.Fatalf("legacy dev building leaked into rooms: %+v", r)
+		}
+		if r.Capacity != 30 {
+			t.Fatalf("capacity for %s = %d, want 30", r.Name, r.Capacity)
+		}
 	}
 	for _, want := range []string{"A101", "B204", "C305"} {
 		if !names[want] {

@@ -18,6 +18,9 @@ type Booking struct {
 	CreatedAt    pgtype.Timestamptz
 	Teacher      pgtype.Text
 	GroupNumbers []string
+	Subject      pgtype.Text
+	LessonType   pgtype.Text
+	Week         pgtype.Text
 }
 
 type Room struct {

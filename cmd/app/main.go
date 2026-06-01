@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -48,6 +49,7 @@ func main() {
 
 	router := httpx.Chain(
 		mux,
+		httpx.CORS(corsOrigins()),
 		httpx.RequestID,
 		httpx.RecoverPanic(logger),
 		httpx.AccessLog(logger),
@@ -103,4 +105,17 @@ func durationEnv(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return value
+}
+
+func corsOrigins() []string {
+	raw := env("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			origins = append(origins, part)
+		}
+	}
+	return origins
 }

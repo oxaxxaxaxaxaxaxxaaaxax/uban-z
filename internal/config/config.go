@@ -18,6 +18,13 @@ type Config struct {
 	RabbitMQURL      string        `env:"RABBITMQ_URL"`
 	RabbitMQExchange string        `env:"RABBITMQ_EXCHANGE" env-default:"booking.events"`
 	JWTSecret        string        `env:"JWT_SECRET"`
+
+	ParserBaseURL         string        `env:"PARSER_BASE_URL" env-default:"https://table.nsu.ru"`
+	ParserTimeout         time.Duration `env:"PARSER_TIMEOUT" env-default:"30s"`
+	ParserWeeksAhead      int           `env:"PARSER_WEEKS_AHEAD" env-default:"16"`
+	ParserDefaultBuilding string        `env:"PARSER_DEFAULT_BUILDING" env-default:"НГУ"`
+	ParserDefaultCapacity int           `env:"PARSER_DEFAULT_CAPACITY" env-default:"30"`
+	ParserTimezone        string        `env:"PARSER_TIMEZONE" env-default:"Asia/Novosibirsk"`
 }
 
 func Load() (Config, error) {
@@ -56,6 +63,25 @@ func (c Config) Validate() error {
 
 	if c.JWTSecret == "" {
 		return errors.New("JWT_SECRET is required")
+	}
+
+	if c.ParserBaseURL == "" {
+		return errors.New("PARSER_BASE_URL is required")
+	}
+	if c.ParserTimeout <= 0 {
+		return errors.New("PARSER_TIMEOUT must be positive")
+	}
+	if c.ParserWeeksAhead <= 0 {
+		return errors.New("PARSER_WEEKS_AHEAD must be positive")
+	}
+	if c.ParserDefaultCapacity <= 0 {
+		return errors.New("PARSER_DEFAULT_CAPACITY must be positive")
+	}
+	if strings.TrimSpace(c.ParserDefaultBuilding) == "" {
+		return errors.New("PARSER_DEFAULT_BUILDING is required")
+	}
+	if _, err := time.LoadLocation(c.ParserTimezone); err != nil {
+		return fmt.Errorf("load PARSER_TIMEZONE: %w", err)
 	}
 
 	return nil

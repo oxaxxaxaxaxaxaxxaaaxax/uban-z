@@ -71,6 +71,7 @@ func (h *Handler) handleBooking(proxy http.Handler) {
 	h.mux.Handle("/rooms/", proxy)
 	h.mux.Handle("/booking", proxy)
 	h.mux.Handle("/booking/", proxy)
+	h.mux.Handle("/parser/status", proxy)
 }
 
 type pathRewrite func(string) string

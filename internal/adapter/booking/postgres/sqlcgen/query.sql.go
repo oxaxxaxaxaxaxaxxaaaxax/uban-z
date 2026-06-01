@@ -14,7 +14,7 @@ import (
 const createBooking = `-- name: CreateBooking :one
 INSERT INTO bookings (room_id, user_id, creator_role, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, created_at
+RETURNING id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, subject, lesson_type, week, created_at
 `
 
 type CreateBookingParams struct {
@@ -34,6 +34,9 @@ type CreateBookingRow struct {
 	EndTime      pgtype.Timestamptz
 	Teacher      pgtype.Text
 	GroupNumbers []string
+	Subject      pgtype.Text
+	LessonType   pgtype.Text
+	Week         pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 }
 
@@ -55,6 +58,9 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (C
 		&i.EndTime,
 		&i.Teacher,
 		&i.GroupNumbers,
+		&i.Subject,
+		&i.LessonType,
+		&i.Week,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -74,7 +80,7 @@ func (q *Queries) DeleteBooking(ctx context.Context, id int64) (int64, error) {
 }
 
 const getBookingByID = `-- name: GetBookingByID :one
-SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, created_at
+SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, subject, lesson_type, week, created_at
 FROM bookings
 WHERE id = $1
 `
@@ -88,6 +94,9 @@ type GetBookingByIDRow struct {
 	EndTime      pgtype.Timestamptz
 	Teacher      pgtype.Text
 	GroupNumbers []string
+	Subject      pgtype.Text
+	LessonType   pgtype.Text
+	Week         pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 }
 
@@ -103,6 +112,9 @@ func (q *Queries) GetBookingByID(ctx context.Context, id int64) (GetBookingByIDR
 		&i.EndTime,
 		&i.Teacher,
 		&i.GroupNumbers,
+		&i.Subject,
+		&i.LessonType,
+		&i.Week,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -128,7 +140,7 @@ func (q *Queries) GetRoomByID(ctx context.Context, id int64) (Room, error) {
 }
 
 const listBookingsByRoomID = `-- name: ListBookingsByRoomID :many
-SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, created_at
+SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, subject, lesson_type, week, created_at
 FROM bookings
 WHERE room_id = $1
 ORDER BY start_time, id
@@ -143,6 +155,9 @@ type ListBookingsByRoomIDRow struct {
 	EndTime      pgtype.Timestamptz
 	Teacher      pgtype.Text
 	GroupNumbers []string
+	Subject      pgtype.Text
+	LessonType   pgtype.Text
+	Week         pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 }
 
@@ -164,6 +179,9 @@ func (q *Queries) ListBookingsByRoomID(ctx context.Context, roomID int64) ([]Lis
 			&i.EndTime,
 			&i.Teacher,
 			&i.GroupNumbers,
+			&i.Subject,
+			&i.LessonType,
+			&i.Week,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -177,7 +195,7 @@ func (q *Queries) ListBookingsByRoomID(ctx context.Context, roomID int64) ([]Lis
 }
 
 const listBookingsByUserID = `-- name: ListBookingsByUserID :many
-SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, created_at
+SELECT id, room_id, user_id, creator_role, start_time, end_time, teacher, group_numbers, subject, lesson_type, week, created_at
 FROM bookings
 WHERE user_id = $1
 ORDER BY start_time, id
@@ -192,6 +210,9 @@ type ListBookingsByUserIDRow struct {
 	EndTime      pgtype.Timestamptz
 	Teacher      pgtype.Text
 	GroupNumbers []string
+	Subject      pgtype.Text
+	LessonType   pgtype.Text
+	Week         pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 }
 
@@ -213,6 +234,9 @@ func (q *Queries) ListBookingsByUserID(ctx context.Context, userID int64) ([]Lis
 			&i.EndTime,
 			&i.Teacher,
 			&i.GroupNumbers,
+			&i.Subject,
+			&i.LessonType,
+			&i.Week,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

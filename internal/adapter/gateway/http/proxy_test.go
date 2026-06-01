@@ -93,6 +93,31 @@ func TestGatewayProxiesBookingRequests(t *testing.T) {
 	}
 }
 
+func TestGatewayProxiesParserStatus(t *testing.T) {
+	t.Parallel()
+
+	var gotPath string
+	bookingService := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"running"}`))
+	})
+
+	gateway := newTestGateway(t, http.NotFoundHandler(), bookingService, nil)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/parser/status", nil)
+
+	gateway.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if gotPath != "/parser/status" {
+		t.Fatalf("booking path = %q, want /parser/status", gotPath)
+	}
+}
+
 func TestGatewayNormalizesPlainTextErrors(t *testing.T) {
 	t.Parallel()
 

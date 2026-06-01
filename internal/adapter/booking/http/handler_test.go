@@ -115,7 +115,7 @@ func TestGetRooms(t *testing.T) {
 		t.Parallel()
 		uc := stubUseCase{
 			listRoomsFn: func(ctx context.Context) ([]domain.Room, error) {
-				return []domain.Room{{ID: 7, Name: "A101", Capacity: 12, Building: "North"}}, nil
+				return []domain.Room{{ID: 7, Name: "A101", Capacity: 30, Building: "НГУ"}}, nil
 			},
 		}
 		srv := newServer(t, uc)

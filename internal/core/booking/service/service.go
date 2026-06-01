@@ -69,7 +69,7 @@ func (s *Service) GetRoomSchedule(ctx context.Context, roomID int) ([]domain.Sch
 		schedule = append(schedule, domain.ScheduleItem{
 			StartTime:    booking.StartTime,
 			EndTime:      booking.EndTime,
-			Type:         "booking",
+			Type:         scheduleType(booking),
 			Teacher:      booking.Teacher,
 			GroupNumbers: booking.GroupNumbers,
 		})
@@ -155,13 +155,13 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID int, caller Calle
 	}
 
 	s.publish(ctx, port.Event{
-		Type:       port.EventBookingCancelled,
-		BookingID:  booking.ID,
-		RoomID:     booking.RoomID,
-		OwnerID:    booking.UserID,
-		OwnerRole:  booking.CreatorRole,
-		StartTime:  booking.StartTime,
-		EndTime:    booking.EndTime,
+		Type:      port.EventBookingCancelled,
+		BookingID: booking.ID,
+		RoomID:    booking.RoomID,
+		OwnerID:   booking.UserID,
+		OwnerRole: booking.CreatorRole,
+		StartTime: booking.StartTime,
+		EndTime:   booking.EndTime,
 		CancelledBy: &port.Actor{
 			UserID: caller.UserID,
 			Login:  caller.Login,
@@ -185,4 +185,17 @@ func (s *Service) publish(ctx context.Context, event port.Event) {
 
 func overlaps(startA, endA, startB, endB time.Time) bool {
 	return startA.Before(endB) && startB.Before(endA)
+}
+
+func scheduleType(booking domain.Booking) string {
+	if booking.Subject == "" && booking.LessonType == "" {
+		return "booking"
+	}
+	if booking.Subject == "" {
+		return booking.LessonType
+	}
+	if booking.LessonType == "" {
+		return booking.Subject
+	}
+	return booking.LessonType + ": " + booking.Subject
 }

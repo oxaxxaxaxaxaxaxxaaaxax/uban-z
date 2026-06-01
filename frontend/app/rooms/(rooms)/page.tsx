@@ -1,11 +1,12 @@
 import Header from '@/components/header';
 import BackButton from '@/components/backButton';
 import RoomsContent from '@/components/rooms/roomsContent';
+import ScheduleImportGate from '@/components/scheduleImportGate';
 
 import styles from '../page.module.scss'
 
 import { getMe } from '@/lib/api/auth';
-import { getRooms } from '@/lib/api/booking';
+import { getRooms, getScheduleImportStatus } from '@/lib/api/booking';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -22,8 +23,10 @@ export default async function RoomsPage() {
         redirect(`/login`);
     }
 
-    const roomsResult = await getRooms();
-    const rooms = roomsResult.success && roomsResult.rooms ? roomsResult.rooms : [];
+    const importStatusResult = await getScheduleImportStatus();
+    const importStatus = importStatusResult.success ? importStatusResult.importStatus : undefined;
+    const roomsResult = importStatus?.status === 'ready' ? await getRooms() : null;
+    const rooms = roomsResult?.success && roomsResult.rooms ? roomsResult.rooms : [];
 
     return (
         <main className={styles.container}>
@@ -31,10 +34,12 @@ export default async function RoomsPage() {
                 <Header fullname={user.fullname} />
                 <section className={styles.section}>
                     <BackButton fallback="/" />
-                    <RoomsContent 
-                        initialRooms={rooms}
-                        interactive={false}
-                    />
+                    <ScheduleImportGate initialStatus={importStatus}>
+                        <RoomsContent
+                            initialRooms={rooms}
+                            interactive={false}
+                        />
+                    </ScheduleImportGate>
                 </section>
             </div>
         </main>

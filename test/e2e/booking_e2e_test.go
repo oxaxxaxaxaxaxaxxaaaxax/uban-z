@@ -102,6 +102,7 @@ func bootServer(t *testing.T) *e2eServer {
 		t.Fatalf("pgxpool.NewWithConfig: %v", err)
 	}
 	t.Cleanup(pool.Close)
+	seedE2ERooms(t, pool)
 
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 
@@ -121,6 +122,22 @@ func bootServer(t *testing.T) *e2eServer {
 	t.Cleanup(srv.Close)
 
 	return &e2eServer{URL: srv.URL}
+}
+
+func seedE2ERooms(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+
+	_, err := pool.Exec(context.Background(), `
+		INSERT INTO rooms (name, capacity, building) VALUES
+			('A101', 30, 'НГУ'),
+			('B204', 30, 'НГУ'),
+			('C305', 30, 'НГУ')
+		ON CONFLICT (building, name) DO UPDATE
+		SET capacity = EXCLUDED.capacity
+	`)
+	if err != nil {
+		t.Fatalf("seed e2e rooms: %v", err)
+	}
 }
 
 func mintToken(t *testing.T, userID int, login string, role domain.Role) string {
@@ -186,7 +203,7 @@ func TestE2E_GetRoomsAnonymous(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	if len(rooms) != 3 {
-		t.Fatalf("got %d rooms, want 3 seeded", len(rooms))
+		t.Fatalf("got %d rooms, want 3 test-seeded", len(rooms))
 	}
 }
 

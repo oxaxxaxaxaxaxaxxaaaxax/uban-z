@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Box, CircularProgress, IconButton } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import { Box, CircularProgress } from '@mui/material';
 import { useFilteredRooms, type RoomFilters } from '@/hooks/useFilteredRooms';
 import RoomFiltersUI from '@/components/rooms/roomFilters';
 import RoomList from '@/components/rooms/roomList';

@@ -174,6 +174,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/booking/my": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Получить бронирования текущего пользователя */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Список бронирований пользователя */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Booking"][];
+                    };
+                };
+                /** @description Некорректные данные запроса */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Внутренняя ошибка сервера */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/booking/{id}": {
         parameters: {
             query?: never;
@@ -247,6 +297,8 @@ export interface components {
             /** Format: date-time */
             end_time?: string;
             type?: string;
+            teacher?: string;
+            group_numbers?: string[];
         };
         CreateBookingRequest: {
             room_id: number;

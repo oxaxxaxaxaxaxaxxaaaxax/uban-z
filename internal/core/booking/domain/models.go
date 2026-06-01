@@ -22,8 +22,11 @@ type Booking struct {
 	CreatorRole  Role
 	StartTime    time.Time
 	EndTime      time.Time
+	Subject      string
+	LessonType   string
 	Teacher      string
 	GroupNumbers []string
+	Week         string
 }
 
 // ScheduleItem describes an occupied room interval returned by schedule queries.

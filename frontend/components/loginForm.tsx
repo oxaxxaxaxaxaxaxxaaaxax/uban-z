@@ -18,6 +18,10 @@ interface LoginFormInputs {
     password: string;
 }
 
+function setSessionToken(token: string) {
+    globalThis.document.cookie = `session_token=${encodeURIComponent(token)}; path=/; max-age=3600; SameSite=Lax`;
+}
+
 export default function LoginForm() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +45,7 @@ export default function LoginForm() {
         }
 
         if (result.token) {
-            document.cookie = `session_token=${result.token}; path=/; max-age=3600; SameSite=Lax`;
+            setSessionToken(result.token);
         }
         router.push('/');
     };

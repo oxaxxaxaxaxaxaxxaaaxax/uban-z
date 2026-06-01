@@ -43,6 +43,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Пользователь с таким логином уже существует */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Внутренняя ошибка сервера */
                 500: {
                     headers: {
@@ -90,6 +97,13 @@ export interface paths {
                         "application/json": components["schemas"]["LoginResponse"];
                     };
                 };
+                /** @description Некорректные данные */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Неверный login или пароль */
                 401: {
                     headers: {
@@ -112,6 +126,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Получить информацию о текущем пользователе */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Данные пользователя */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                /** @description Некорректные данные */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Пользователь не авторизован */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Внутренняя ошибка сервера */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -120,6 +191,7 @@ export interface components {
             login: string;
             password: string;
             role: string;
+            full_name: string;
         };
         LoginRequest: {
             login: string;
@@ -131,6 +203,8 @@ export interface components {
         UserResponse: {
             id?: number;
             login?: string;
+            role?: string;
+            full_name?: string;
         };
     };
     responses: never;

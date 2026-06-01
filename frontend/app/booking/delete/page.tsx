@@ -7,7 +7,7 @@ import styles from '../page.module.scss'
 import { getMe } from '@/lib/api/auth';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { getUserBookings, getRooms } from '@/lib/api/booking';
+import { getUserBookings } from '@/lib/api/booking';
 
 export default async function DeleteBookingPage() {
     const cookieStore = await cookies();
@@ -22,11 +22,8 @@ export default async function DeleteBookingPage() {
         redirect(`/login`);
     }
 
-    const result = await getUserBookings();
+    const result = await getUserBookings(token);
     const bookings = result.bookings || [];
-
-    const roomsResult = await getRooms();
-    const initialRooms = roomsResult.success && roomsResult.rooms ? roomsResult.rooms : [];
 
     return (
         <main className={styles.container}>

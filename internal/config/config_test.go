@@ -18,6 +18,13 @@ func TestConfig_Validate(t *testing.T) {
 		ShutdownTimeout:  5 * time.Second,
 		RabbitMQExchange: "booking.events",
 		JWTSecret:        "test-secret",
+
+		ParserBaseURL:         "https://table.nsu.ru",
+		ParserTimeout:         30 * time.Second,
+		ParserWeeksAhead:      16,
+		ParserDefaultBuilding: "НГУ",
+		ParserDefaultCapacity: 30,
+		ParserTimezone:        "Asia/Novosibirsk",
 	}
 
 	cases := []struct {
@@ -54,6 +61,13 @@ func TestConfig_Validate(t *testing.T) {
 			name:      "missing JWT_SECRET fails",
 			mutate:    func(c *config.Config) { c.JWTSecret = "" },
 			wantError: "JWT_SECRET",
+		},
+		{
+			name: "invalid parser timezone fails",
+			mutate: func(c *config.Config) {
+				c.ParserTimezone = "Mars/Olympus"
+			},
+			wantError: "PARSER_TIMEZONE",
 		},
 	}
 

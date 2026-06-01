@@ -1,13 +1,14 @@
 import Header from '@/components/header';
 import BackButton from '@/components/backButton';
 import ScheduleContent from '@/components/schedule/scheduleContent';
+import ScheduleImportGate from '@/components/scheduleImportGate';
 
 import styles from '../page.module.scss'
 
 import { getMe } from '@/lib/api/auth';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { getRooms } from '@/lib/api/booking';
+import { getRooms, getScheduleImportStatus } from '@/lib/api/booking';
 
 export default async function TimetablePage() {
     const cookieStore = await cookies();
@@ -22,8 +23,10 @@ export default async function TimetablePage() {
         redirect(`/login`);
     }
 
-    const roomsResult = await getRooms();
-    const initialRooms = roomsResult.success && roomsResult.rooms ? roomsResult.rooms : [];
+    const importStatusResult = await getScheduleImportStatus();
+    const importStatus = importStatusResult.success ? importStatusResult.importStatus : undefined;
+    const roomsResult = importStatus?.status === 'ready' ? await getRooms() : null;
+    const initialRooms = roomsResult?.success && roomsResult.rooms ? roomsResult.rooms : [];
 
     return (
         <main className={styles.container}>
@@ -31,7 +34,9 @@ export default async function TimetablePage() {
                 <Header fullname={user.fullname} />
                 <section>
                     <BackButton fallback="/" />
-                    <ScheduleContent initialRooms={initialRooms} />
+                    <ScheduleImportGate initialStatus={importStatus}>
+                        <ScheduleContent initialRooms={initialRooms} />
+                    </ScheduleImportGate>
                 </section>
             </div>
         </main>

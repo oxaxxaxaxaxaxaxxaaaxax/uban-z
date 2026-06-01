@@ -1,14 +1,10 @@
 -- +goose Up
 -- +goose StatementBegin
-INSERT INTO rooms (name, capacity, building) VALUES
-    ('A101', 12, 'North'),
-    ('B204', 24, 'South'),
-    ('C305',  8, 'West')
-ON CONFLICT (building, name) DO NOTHING;
+-- Dev rooms used to be seeded here. Real rooms are now imported from NSU on
+-- booking-service startup, so fresh databases should not get fake buildings.
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
--- intentionally no-op: keep dev seed idempotent and avoid
--- destroying rows that may have been edited locally.
+-- intentionally no-op
 -- +goose StatementEnd
