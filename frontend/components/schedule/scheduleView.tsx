@@ -3,7 +3,7 @@
 import { Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import type { components } from '@/types/booking';
-import { TIME_SLOTS } from '@/lib/time-slots'
+import { TIME_SLOTS } from '@/lib/time-slots';
 import styles from './scheduleView.module.scss';
 
 type ScheduleItem = components['schemas']['ScheduleItem'];
@@ -41,14 +41,15 @@ const getDayOfWeek = (iso?: string) => {
 };
 
 
-const getTimeSlotIndex = (time?: string) => {
-    if (!time) return -1;
+const getTimeSlotIndex = (iso?: string) => {
+    if (!iso) return -1;
 
-    const timePart = time.includes('T') ? time.split('T')[1] : time;
-    const [hours, minutes] = timePart.split(':').map(Number);
+    const date = new Date(iso);
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
 
-    if (isNaN(hours) || isNaN(minutes)) {
-        console.warn('getTimeSlotIndex: invalid time:', time);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+        console.warn('getTimeSlotIndex: invalid time:', iso);
         return -1;
     }
 
