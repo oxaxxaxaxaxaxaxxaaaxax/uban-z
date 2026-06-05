@@ -13,9 +13,11 @@ type Booking = components['schemas']['Booking'] & {
   room_name?: string;
   building?: string;
 };
+type Room = components['schemas']['Room'];
 
 interface MyBookingsListProps {
   initialBookings: Booking[];
+  initialRooms: Room[];
 }
 
 const formatBookingTime = (start?: string, end?: string): string => {
@@ -40,7 +42,7 @@ const formatDate = (iso?: string) => {
   });
 };
 
-export default function MyBookingsList({ initialBookings }: MyBookingsListProps) {
+export default function MyBookingsList({ initialBookings, initialRooms }: MyBookingsListProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [cancelingId, setCancelingId] = useState<number | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; booking: Booking | null }>({
@@ -48,6 +50,21 @@ export default function MyBookingsList({ initialBookings }: MyBookingsListProps)
     booking: null
   });
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const roomsByID = new Map(initialRooms.map((room) => [room.id, room]));
+
+  const getRoom = (booking: Booking) => {
+    return booking.room_id ? roomsByID.get(booking.room_id) : undefined;
+  };
+
+  const getRoomTitle = (booking: Booking) => {
+    const room = getRoom(booking);
+    return booking.room_name || room?.name || `Аудитория №${booking.room_id ?? '—'}`;
+  };
+
+  const getRoomBuilding = (booking: Booking) => {
+    return booking.building || getRoom(booking)?.building || '';
+  };
 
   const handleOpenConfirm = (booking: Booking) => {
     setConfirmDialog({ open: true, booking });
@@ -110,11 +127,13 @@ export default function MyBookingsList({ initialBookings }: MyBookingsListProps)
             <CardContent className={styles.cardContent}>
               <Box className={styles.cardHeader}>
                 <Typography variant="h6" className={styles.roomName}>
-                  Аудитория {booking.room_name || '${booking.room_id}'}
+                  {getRoomTitle(booking)}
                 </Typography>
-                <Typography className={styles.building}>
-                  {booking.building}
-                </Typography>
+                {getRoomBuilding(booking) && (
+                  <Typography className={styles.building}>
+                    {getRoomBuilding(booking)}
+                  </Typography>
+                )}
               </Box>
 
               <Box className={styles.timeInfo}>
@@ -148,7 +167,7 @@ export default function MyBookingsList({ initialBookings }: MyBookingsListProps)
         <DialogContent>
           <Typography>
             Вы действительно хотите отменить бронь: аудитория{' '}
-            <strong>{confirmDialog.booking?.room_name || confirmDialog.booking?.room_id}</strong>,{' '}
+            <strong>{confirmDialog.booking ? getRoomTitle(confirmDialog.booking) : '—'}</strong>,{' '}
             {formatDate(confirmDialog.booking?.start_time)}?
           </Typography>
           <Typography variant="body2" className={styles.dialogHint}>

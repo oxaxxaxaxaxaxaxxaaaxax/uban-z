@@ -1,6 +1,46 @@
 name: uban-z
 
 services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.3
+    restart: unless-stopped
+    ports:
+      - "5044:5044"
+    volumes:
+      - ./deploy/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
   auth-postgres:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -84,6 +124,8 @@ services:
       PORT: "8080"
       DATABASE_URL: "postgres://auth:auth@auth-postgres:5432/auth?sslmode=disable"
       JWT_SECRET: "dev-only-secret-replace-me"
+      LOGSTASH_ADDR: "logstash:5044"
+      SERVICE_NAME: "auth-service"
     depends_on:
       auth-postgres:
         condition: service_healthy
@@ -111,6 +153,8 @@ services:
       PARSER_DEFAULT_BUILDING: "НГУ"
       PARSER_DEFAULT_CAPACITY: "30"
       PARSER_TIMEZONE: "Asia/Novosibirsk"
+      LOGSTASH_ADDR: "logstash:5044"
+      SERVICE_NAME: "booking-service"
     depends_on:
       booking-postgres:
         condition: service_healthy
@@ -130,6 +174,8 @@ services:
       AUTH_SERVICE_URL: "http://auth-service:8080"
       BOOKING_SERVICE_URL: "http://booking-service:8080"
       CORS_ALLOWED_ORIGINS: "http://localhost:3000"
+      LOGSTASH_ADDR: "logstash:5044"
+      SERVICE_NAME: "gateway-api"
     ports:
       - "8080:8080"
     depends_on:
@@ -157,3 +203,4 @@ services:
 volumes:
   auth_postgres_data:
   booking_postgres_data:
+  elasticsearch_data:

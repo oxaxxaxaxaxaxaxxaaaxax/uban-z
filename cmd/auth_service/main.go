@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -15,6 +16,8 @@ import (
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/jwt"
 	authpostgres "github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/adapter/auth/repository/postgres"
 	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/core/auth/service"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/platform/httpx"
+	"github.com/oxaxxaxaxaxaxaxxaaaxax/uban-z/internal/platform/logging"
 )
 
 const dbConnectTimeout = 10 * time.Second
@@ -37,17 +40,29 @@ func main() {
 		port = "8080"
 	}
 
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info"
+	}
+	logger, err := logging.New(logLevel)
+	if err != nil {
+		slog.New(slog.NewJSONHandler(os.Stderr, nil)).Error("logger init failed", slog.Any("err", err))
+		os.Exit(1)
+	}
+
 	pool, err := openPostgres(databaseURL)
 	if err != nil {
-		log.Fatalf("postgres connect failed: %v", err)
+		logger.Error("postgres connect failed", slog.Any("err", err))
+		os.Exit(1)
 	}
 	defer pool.Close()
+	logger.Info("connected to postgres")
 
 	jwtManager := jwt.NewJWTManager(secret)
 	repo := authpostgres.NewUserRepository(pool)
 	authService := service.NewAuthService(repo, jwtManager)
 
-	authHandler := httpHandler.NewAuthHandler(authService)
+	authHandler := httpHandler.NewAuthHandler(authService, logger)
 
 	tokenMw := middleware.JWTMiddleware(jwtManager)
 
@@ -57,8 +72,18 @@ func main() {
 	mux.HandleFunc("POST /api/auth/login", authHandler.PostAuthLogin)
 	mux.Handle("GET /api/auth/me", tokenMw(http.HandlerFunc(authHandler.GetAuthMe)))
 
-	log.Printf("Server started on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	router := httpx.Chain(
+		mux,
+		httpx.RequestID,
+		httpx.RecoverPanic(logger),
+		httpx.AccessLog(logger),
+	)
+
+	logger.Info("auth service starting",
+		slog.String("addr", ":"+port),
+		slog.String("log_level", logLevel),
+	)
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }
 
 func openPostgres(url string) (*pgxpool.Pool, error) {

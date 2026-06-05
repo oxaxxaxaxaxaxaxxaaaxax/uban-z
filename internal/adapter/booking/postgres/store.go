@@ -162,6 +162,22 @@ func (s *Store) DeleteByID(ctx context.Context, id int) error {
 	return nil
 }
 
+func (s *Store) HasParsedSchedule(ctx context.Context) (bool, error) {
+	var exists bool
+	err := s.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM bookings
+			WHERE user_id = 0 AND creator_role = $1
+			LIMIT 1
+		)
+	`, string(domain.RoleAdmin)).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check parsed schedule: %w", err)
+	}
+	return exists, nil
+}
+
 func (s *Store) ReplaceParsedSchedule(ctx context.Context, rooms []parserdomain.RoomSelector, slots []parserdomain.ScheduleSlot) (parserdomain.ImportStats, error) {
 	stats := parserdomain.ImportStats{
 		RoomsSeen:       len(rooms),

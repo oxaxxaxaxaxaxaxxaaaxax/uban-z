@@ -17,6 +17,14 @@ func TestPostgresStore_ReplaceParsedSchedule_importsAndReplacesParserRows(t *tes
 	store := bookingpostgres.NewStoreFromPool(pool)
 	ctx := context.Background()
 
+	hasSchedule, err := store.HasParsedSchedule(ctx)
+	if err != nil {
+		t.Fatalf("HasParsedSchedule before import: %v", err)
+	}
+	if hasSchedule {
+		t.Fatal("HasParsedSchedule before import = true, want false")
+	}
+
 	start := time.Date(2026, time.September, 7, 9, 0, 0, 0, time.UTC)
 	rooms := []parserdomain.RoomSelector{{Name: "3107 (Новый корпус)", FullURL: "https://table.nsu.ru/room/3107"}}
 	slots := []parserdomain.ScheduleSlot{
@@ -51,6 +59,13 @@ func TestPostgresStore_ReplaceParsedSchedule_importsAndReplacesParserRows(t *tes
 	}
 	if stats.RoomsImported != 1 || stats.LessonsImported != 2 || stats.LessonsSkipped != 0 {
 		t.Fatalf("stats = %+v", stats)
+	}
+	hasSchedule, err = store.HasParsedSchedule(ctx)
+	if err != nil {
+		t.Fatalf("HasParsedSchedule after import: %v", err)
+	}
+	if !hasSchedule {
+		t.Fatal("HasParsedSchedule after import = false, want true")
 	}
 
 	roomID := findRoomID(t, store, "3107", "Новый корпус")

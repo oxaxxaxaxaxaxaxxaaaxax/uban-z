@@ -70,7 +70,15 @@ func (h *Handler) PostBooking(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, domain.ErrScheduleConflict) {
 			h.logger.WarnContext(r.Context(), "booking.conflict",
+				slog.String("event", "booking.conflict"),
+				slog.String("action", "Booking rejected"),
+				slog.String("actor", identity.Login),
+				slog.String("details", "User "+identity.Login+" tried to book room with an occupied time slot"),
+				slog.String("request_id", httpx.RequestIDFrom(r.Context())),
 				slog.Int("room_id", request.RoomId),
+				slog.Int("user_id", identity.UserID),
+				slog.String("login", identity.Login),
+				slog.String("role", string(identity.Role)),
 				slog.Time("start_time", request.StartTime),
 				slog.Time("end_time", request.EndTime),
 			)
@@ -80,10 +88,18 @@ func (h *Handler) PostBooking(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.logger.InfoContext(r.Context(), "booking.created",
+		slog.String("event", "booking.created"),
+		slog.String("action", "Booking created"),
+		slog.String("actor", identity.Login),
+		slog.String("details", "User "+identity.Login+" booked a room"),
+		slog.String("request_id", httpx.RequestIDFrom(r.Context())),
 		slog.Int("booking_id", booking.ID),
 		slog.Int("room_id", booking.RoomID),
 		slog.Int("user_id", booking.UserID),
+		slog.String("login", identity.Login),
 		slog.String("creator_role", string(booking.CreatorRole)),
+		slog.Time("start_time", booking.StartTime),
+		slog.Time("end_time", booking.EndTime),
 	)
 	writeJSON(w, http.StatusOK, mapBooking(booking))
 }
@@ -124,8 +140,14 @@ func (h *Handler) DeleteBookingId(w http.ResponseWriter, r *http.Request, id int
 	}
 
 	h.logger.InfoContext(r.Context(), "booking.cancelled",
+		slog.String("event", "booking.cancelled"),
+		slog.String("action", "Booking cancelled"),
+		slog.String("actor", identity.Login),
+		slog.String("details", "User "+identity.Login+" cancelled booking"),
+		slog.String("request_id", httpx.RequestIDFrom(r.Context())),
 		slog.Int("booking_id", id),
 		slog.Int("cancelled_by_user_id", identity.UserID),
+		slog.String("cancelled_by_login", identity.Login),
 		slog.String("cancelled_by_role", string(identity.Role)),
 	)
 	w.WriteHeader(http.StatusOK)

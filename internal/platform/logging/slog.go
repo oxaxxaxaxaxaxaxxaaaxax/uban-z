@@ -2,6 +2,7 @@ package logging
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 )
@@ -21,6 +22,15 @@ func New(level string) (*slog.Logger, error) {
 		return nil, fmt.Errorf("unknown log level %q", level)
 	}
 
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: lvl})
-	return slog.New(handler), nil
+	writer := io.Writer(os.Stdout)
+	if addr := os.Getenv("LOGSTASH_ADDR"); addr != "" {
+		writer = io.MultiWriter(writer, newAsyncTCPWriter(addr))
+	}
+
+	handler := slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: lvl})
+	logger := slog.New(handler)
+	if service := os.Getenv("SERVICE_NAME"); service != "" {
+		logger = logger.With(slog.String("service", service))
+	}
+	return logger, nil
 }

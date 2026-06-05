@@ -41,6 +41,7 @@ func RecoverPanic(logger *slog.Logger) func(http.Handler) http.Handler {
 			defer func() {
 				if rec := recover(); rec != nil {
 					logger.ErrorContext(r.Context(), "panic recovered",
+						slog.String("event", "http.panic_recovered"),
 						slog.Any("panic", rec),
 						slog.String("request_id", RequestIDFrom(r.Context())),
 						slog.String("method", r.Method),
@@ -71,13 +72,25 @@ func AccessLog(logger *slog.Logger) func(http.Handler) http.Handler {
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rec, r)
 
-			logger.InfoContext(r.Context(), "request",
+			attrs := []slog.Attr{
 				slog.String("request_id", RequestIDFrom(r.Context())),
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
+				slog.String("query", r.URL.RawQuery),
+				slog.String("remote_addr", r.RemoteAddr),
+				slog.String("user_agent", r.UserAgent()),
 				slog.Int("status", rec.status),
 				slog.Int64("duration_ms", time.Since(start).Milliseconds()),
-			)
+			}
+			if identity, ok := IdentityFrom(r.Context()); ok {
+				attrs = append(attrs,
+					slog.Int("user_id", identity.UserID),
+					slog.String("login", identity.Login),
+					slog.String("role", string(identity.Role)),
+				)
+			}
+
+			logger.LogAttrs(r.Context(), slog.LevelInfo, "request", attrs...)
 		})
 	}
 }

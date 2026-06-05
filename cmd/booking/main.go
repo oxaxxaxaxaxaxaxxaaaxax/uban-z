@@ -110,13 +110,45 @@ func main() {
 }
 
 func startStartupScheduleImport(ctx context.Context, cfg config.Config, store *bookingpostgres.Store, logger *slog.Logger, status *importStatusTracker) {
-	logger.Info("parser startup import started")
+	logger.Info("parser startup import check started")
 	status.markRunning()
 	go func() {
+		startedAt := time.Now()
+		hasSchedule, err := store.HasParsedSchedule(ctx)
+		if err != nil {
+			status.markFailed(err)
+			logger.Error("parser startup import check failed",
+				slog.String("event", "parser.startup_import.check_failed"),
+				slog.Any("err", err),
+				slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
+			)
+			return
+		}
+		if hasSchedule {
+			status.markSkipped("parsed schedule already exists in database")
+			logger.Info("parser startup import skipped",
+				slog.String("event", "parser.startup_import.skipped"),
+				slog.String("action", "Schedule import skipped"),
+				slog.String("actor", "system"),
+				slog.String("details", "Schedule was already loaded, parser did not run"),
+				slog.String("reason", "parsed schedule already exists in database"),
+				slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
+			)
+			return
+		}
+
+		logger.Info("parser startup import started")
 		stats, err := importStartupSchedule(ctx, cfg, store, logger)
 		if err != nil {
 			status.markFailed(err)
-			logger.Error("parser startup import failed", slog.Any("err", err))
+			logger.Error("parser startup import failed",
+				slog.String("event", "parser.startup_import.failed"),
+				slog.String("action", "Schedule import failed"),
+				slog.String("actor", "system"),
+				slog.String("details", "Parser failed to load NSU schedule: "+err.Error()),
+				slog.Any("err", err),
+				slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
+			)
 			return
 		}
 		status.markReady(stats)
@@ -130,6 +162,8 @@ type importStatusTracker struct {
 	stats       parserdomain.ImportStats
 	startedAt   time.Time
 	completedAt *time.Time
+	skipped     bool
+	reason      string
 }
 
 type importStatusResponse struct {
@@ -138,6 +172,8 @@ type importStatusResponse struct {
 	Stats       *parserdomain.ImportStats `json:"stats,omitempty"`
 	StartedAt   string                    `json:"started_at,omitempty"`
 	CompletedAt string                    `json:"completed_at,omitempty"`
+	Skipped     bool                      `json:"skipped,omitempty"`
+	Reason      string                    `json:"reason,omitempty"`
 }
 
 func newImportStatusTracker() *importStatusTracker {
@@ -153,6 +189,8 @@ func (s *importStatusTracker) markRunning() {
 	s.stats = parserdomain.ImportStats{}
 	s.startedAt = time.Now().UTC()
 	s.completedAt = nil
+	s.skipped = false
+	s.reason = ""
 }
 
 func (s *importStatusTracker) markReady(stats parserdomain.ImportStats) {
@@ -164,6 +202,21 @@ func (s *importStatusTracker) markReady(stats parserdomain.ImportStats) {
 	s.err = ""
 	s.stats = stats
 	s.completedAt = &completedAt
+	s.skipped = false
+	s.reason = ""
+}
+
+func (s *importStatusTracker) markSkipped(reason string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	completedAt := time.Now().UTC()
+	s.status = "ready"
+	s.err = ""
+	s.stats = parserdomain.ImportStats{}
+	s.completedAt = &completedAt
+	s.skipped = true
+	s.reason = reason
 }
 
 func (s *importStatusTracker) markFailed(err error) {
@@ -174,6 +227,8 @@ func (s *importStatusTracker) markFailed(err error) {
 	s.status = "failed"
 	s.err = err.Error()
 	s.completedAt = &completedAt
+	s.skipped = false
+	s.reason = ""
 }
 
 func (s *importStatusTracker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -184,6 +239,8 @@ func (s *importStatusTracker) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		Status:    s.status,
 		Error:     s.err,
 		StartedAt: formatOptionalTime(s.startedAt),
+		Skipped:   s.skipped,
+		Reason:    s.reason,
 	}
 	if s.completedAt != nil {
 		response.CompletedAt = s.completedAt.Format(time.RFC3339)
@@ -266,6 +323,10 @@ func importStartupSchedule(ctx context.Context, cfg config.Config, store *bookin
 	}
 
 	logger.Info("parser startup import completed",
+		slog.String("event", "parser.startup_import.completed"),
+		slog.String("action", "Schedule imported"),
+		slog.String("actor", "system"),
+		slog.String("details", "Parser loaded NSU schedule into database"),
 		slog.Int("rooms_seen", stats.RoomsSeen),
 		slog.Int("rooms_imported", stats.RoomsImported),
 		slog.Int("lessons_seen", stats.LessonsSeen),
