@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { serverLogger } from './lib/logger';
 
 const publicRoutes = ['/login', '/register'];
 
 const STATIC_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.svg', '.gif', '.ico', '.json']
 
 export function middleware(request: NextRequest) {
+    if (serverLogger) {
+      serverLogger.info(`Incoming request: ${request.method} ${request.nextUrl.pathname}`);
+    }
     const { pathname } = request.nextUrl;
     
     const hasStaticExtension = STATIC_EXTENSIONS.some(ext => 
