@@ -1,5 +1,6 @@
 import { apiRequest } from "./client";
 import type { components } from '@/types/booking';
+import { logger } from '../logger';
 
 type Room = components['schemas']['Room'];
 type ScheduleItem = components['schemas']['ScheduleItem'];
@@ -30,9 +31,11 @@ export async function getRooms(): Promise<{
 }> {
     const { data, error } = await apiRequest<Room[]>('/rooms', { method: 'GET' });
     if (error) {
+        logger.error('getRoom error', error)
         return { success: false, error };
     }
-
+  
+     logger.info('getRoom successful');
     return { success: true, rooms: data || [] };
 }
 
@@ -44,9 +47,11 @@ export async function getRoomSchedule(id: number): Promise<{
   });
 
   if (error) {
+    logger.error('getRoomSchedule error', error)
     return { success: false, error };
   }
 
+  logger.info('getRoomSchedule successful');
   return { success: true, schedule: data || [] };
 }
 
@@ -58,9 +63,11 @@ export async function getScheduleImportStatus(): Promise<{
   });
 
   if (error) {
+    logger.error('getScheduleImportStatus error', error)
     return { success: false, error };
   }
 
+  logger.info('getScheduleImportStatus successful');
   return { success: true, importStatus: data };
 }
 
@@ -86,9 +93,11 @@ export async function createBooking(id: number, startTime: string, endTime: stri
         }
       };
     }
+    logger.error('createBooking error', error)
     return { success: false, error };
   }
 
+  logger.info('createBooking successful');
   return { success: true, booking: data };
 }
 
@@ -99,12 +108,13 @@ export async function cancelBooking(bookingId: number): Promise<{
   const { error } = await apiRequest<null>(`/booking/${bookingId}`, { method: 'DELETE' });
 
   if (error) {
+      logger.error('cancelBooking error', error)
       return { 
           success: false, 
           error 
       };
   }
-
+  logger.info('cancelBooking successful');
   return { success: true };
 }
 
@@ -112,17 +122,22 @@ export async function cancelBooking(bookingId: number): Promise<{
 export async function getUserBookings(token?: string): Promise<{
   success: boolean; bookings?: Booking[]; error?: { status: number; message: string };
 }> {
-    const { data, error } = await apiRequest<Booking[]>('/booking/my', {
-        method: 'GET',
-        authToken: token,
-    });
+  const { data, error } = await apiRequest<Booking[]>('/booking/my', {
+    method: 'GET',
+    authToken: token,
+  });
     
-    if (error) return {
-        success: false,
-        error
-    };
+  if (error) {
+    logger.error('getUserBookings error', error)
     return {
-        success: true,
-        bookings: data || []
+      success: false,
+      error
     };
+  }
+
+  logger.info('getUserBookings successful');
+  return {
+      success: true,
+      bookings: data || []
+  };
 }
