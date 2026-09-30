@@ -1,0 +1,14 @@
+name: uban-z-build
+
+services:
+  go-builder:
+    image: golang:1.25.7-bookworm
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - go_modules:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+
+volumes:
+  go_modules:
+  go_build_cache:

@@ -1,4 +1,6 @@
 SHELL := /bin/bash
+VERSION ?= dev
+GO_BUILD := docker compose -f compose.build.yaml run --rm --no-deps go-builder go build
 
 MIGRATIONS_DIR := migrations/booking
 AUTH_MIGRATIONS_DIR := migrations/auth
@@ -8,11 +10,14 @@ AUTH_DATABASE_URL ?= $(DATABASE_URL)
 
 BOOKING_PKGS := ./cmd/booking/... ./internal/... ./test/...
 
-.PHONY: help build test test-integration test-all vet migrate-up migrate-down migrate-status sqlc-generate compose-up compose-down
+.PHONY: help build-auth build-booking build-gateway clean test test-integration test-all vet migrate-up migrate-down migrate-status sqlc-generate compose-up compose-down
 
 help:
 	@echo "Targets:"
-	@echo "  build              Build the booking binary into ./bin/booking"
+	@echo "  build-auth         Build build/auth/VERSION/auth (VERSION defaults to dev)"
+	@echo "  build-booking      Build build/booking/VERSION/booking"
+	@echo "  build-gateway      Build build/gateway/VERSION/gateway"
+	@echo "  clean              Remove all locally built binary versions"
 	@echo "  test               Run unit tests (-race)"
 	@echo "  test-integration   Run integration tests (Docker required)"
 	@echo "  test-all           Run unit + integration tests"
@@ -24,10 +29,20 @@ help:
 	@echo "  compose-up         Bring up the booking-only docker-compose slice"
 	@echo "  compose-down       Tear down the slice (and named volumes)"
 
-build:
-	@mkdir -p bin
-	@go build -trimpath -o bin/booking ./cmd/booking
-	@echo "built bin/booking"
+build-auth:
+	@mkdir -p build/auth/$(VERSION)
+	$(GO_BUILD) -o build/auth/$(VERSION)/auth ./cmd/auth_service
+
+build-booking:
+	@mkdir -p build/booking/$(VERSION)
+	$(GO_BUILD) -o build/booking/$(VERSION)/booking ./cmd/booking
+
+build-gateway:
+	@mkdir -p build/gateway/$(VERSION)
+	$(GO_BUILD) -o build/gateway/$(VERSION)/gateway ./cmd/app
+
+clean:
+	rm -rf build
 
 test:
 	@go test -race -count=1 $(BOOKING_PKGS)
@@ -64,7 +79,7 @@ sqlc-generate:
 	@cd $(SQLC_DIR) && sqlc generate
 
 compose-up:
-	@docker compose -f cmd/booking/compose.yaml up --build -d
+	@docker compose --env-file cmd/booking/.env -f cmd/booking/compose.yaml up --no-build -d
 
 compose-down:
 	@docker compose -f cmd/booking/compose.yaml down -v

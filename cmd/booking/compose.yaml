@@ -20,15 +20,15 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: booking
-      POSTGRES_PASSWORD: booking
-      POSTGRES_DB: booking
+      POSTGRES_USER: ${BOOKING_POSTGRES_USER:?required}
+      POSTGRES_PASSWORD: ${BOOKING_POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${BOOKING_POSTGRES_DB:?required}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U booking -d booking"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -37,6 +37,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?required}
     ports:
       - "5672:5672"    # AMQP
       - "15672:15672"  # management UI
@@ -51,7 +54,7 @@ services:
     image: ghcr.io/kukymbr/goose-docker:latest
     environment:
       GOOSE_DRIVER: postgres
-      GOOSE_DBSTRING: "host=postgres port=5432 user=booking password=booking dbname=booking sslmode=disable"
+      GOOSE_DBSTRING: ${BOOKING_DATABASE_URL:?required}
       GOOSE_MIGRATION_DIR: /migrations
     volumes:
       - ../../migrations/booking:/migrations:ro
@@ -63,19 +66,21 @@ services:
     build:
       context: ../..
       dockerfile: cmd/booking/Dockerfile
-    image: uban-z/booking:dev
+      args:
+        VERSION: ${BOOKING_VERSION:?required}
+    image: uban-z/booking:${BOOKING_VERSION:?required}
     restart: unless-stopped
     environment:
       PORT: "8080"
-      DATABASE_URL: "postgres://booking:booking@postgres:5432/booking?sslmode=disable"
-      LOG_LEVEL: info
-      SHUTDOWN_TIMEOUT: 5s
-      EVENTS_ENABLED: "true"
-      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      DATABASE_URL: ${BOOKING_DATABASE_URL:?required}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SHUTDOWN_TIMEOUT: ${SHUTDOWN_TIMEOUT:-5s}
+      EVENTS_ENABLED: ${EVENTS_ENABLED:-true}
+      RABBITMQ_URL: ${RABBITMQ_URL:?required}
       RABBITMQ_EXCHANGE: booking.events
       
       # Local dev only — must match auth-service's signing key in any real deployment.
-      JWT_SECRET: "dev-only-secret-replace-me"
+      JWT_SECRET: ${JWT_SECRET:?required}
 
     ports:
       - "8080:8080"

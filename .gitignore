@@ -1,8 +1,10 @@
 .env
+.env.*
+!.env.example
+*.env
 .kilo
 bin/
-.env.local
-.env.*.local
+build/
 
 # Temporary files
 

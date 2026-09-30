@@ -5,46 +5,99 @@
 Run the integrated local stack from the repository root:
 
 ```bash
-docker compose up --build
+cp .env.example .env
+```
+
+Fill in `.env`: replace secret placeholders, keep database credentials and
+connection URLs consistent, and URL-encode special characters in URL passwords.
+Then run:
+
+```bash
+make build-auth VERSION=v1
+make build-booking VERSION=v1
+make build-gateway VERSION=v1
+docker compose build
+docker compose up -d --no-build
 ```
 
 This brings up auth-service, booking-service, gateway-api, frontend,
 PostgreSQL for each service, RabbitMQ, and goose migration sidecars.
-After migrations booking-service always fetches https://table.nsu.ru once,
-imports rooms, expands room lessons into concrete schedule rows, and then
-starts serving HTTP.
+After migrations booking-service imports the NSU timetable in the background
+only when no imported schedule exists in the database.
 Endpoints:
 
 - Frontend → http://localhost:3000
 - API Gateway → http://localhost:8080
-- Booking PostgreSQL → localhost:5432 (booking / booking)
-- Auth PostgreSQL → localhost:5433 (auth / auth)
-- RabbitMQ management → http://localhost:15672 (guest / guest)
+- Booking PostgreSQL → localhost:5432 (credentials from `.env`)
+- Auth PostgreSQL → localhost:5433 (credentials from `.env`)
+- RabbitMQ management → http://localhost:15672 (credentials from `.env`)
+
+Compose reads the root `.env` for interpolation; it is ignored by Git.
+Only `.env.example` is committed. Internal service names and ports are part
+of this local deployment. `NEXT_PUBLIC_API_GATEWAY_URL` is public and baked
+into the frontend at build time; never put secrets in `NEXT_PUBLIC_*`.
+Changing PostgreSQL credentials does not update existing database volumes;
+existing databases require matching credentials or an explicit credential update.
 
 For booking-service development in isolation:
 
 ```bash
-docker compose -f cmd/booking/compose.yaml up --build
+cp cmd/booking/.env.example cmd/booking/.env
+# Fill in cmd/booking/.env before running:
+make build-booking VERSION=v1
+docker compose --env-file cmd/booking/.env -f cmd/booking/compose.yaml build booking
+docker compose --env-file cmd/booking/.env -f cmd/booking/compose.yaml up -d --no-build
 ```
 
 This brings up PostgreSQL, RabbitMQ, a goose migration sidecar, and the
 booking-service itself. Endpoints:
 
 - Booking API → http://localhost:8080
-- RabbitMQ management → http://localhost:15672 (guest / guest)
+- RabbitMQ management → http://localhost:15672 (credentials from the standalone env)
 
 `GET /rooms` and `GET /rooms/{id}` are anonymous. `POST /booking` and
 `DELETE /booking/{id}` require a `Bearer` JWT signed with the same
-`JWT_SECRET` that booking-service uses (compose defaults to a dev-only
-placeholder — rotate it for any real deployment, and align it with
+`JWT_SECRET` that booking-service uses (set it in `.env` and align it with
 auth-service's signing key when integrating). The token must carry the
 claims `sub` (user id as string), `login`, and `role` (`student_b`,
 `student_m`, `student_a`, `teacher`, or `admin`).
 
+## Build, Release, Run
+
+Each Go service has independent versions: `AUTH_VERSION`, `BOOKING_VERSION`,
+and `GATEWAY_VERSION` in `.env`. Binaries are stored as
+`build/<service>/<version>/<binary>` and are ignored by Git. Building a new
+version keeps older versions until an explicit `make clean`.
+
+Build targets run ordinary `go build` in the Go container defined in
+`compose.build.yaml`. Docker Desktop must be running on macOS. Docker chooses
+the native architecture automatically; no GOOS, GOARCH or CGO_ENABLED overrides
+are used. The builder and runtime images both use Debian 12, including runtime
+libraries for normally built Go binaries. Artifacts are saved in the local
+`build/` directory. Runtime Dockerfiles only copy those artifacts. Frontend
+keeps its existing Docker build process.
+
+To update auth only:
+
+```bash
+make build-auth VERSION=v2
+# Set AUTH_VERSION=v2 in .env; leave other service versions unchanged.
+docker compose build auth-service
+docker compose up -d --no-build --no-deps auth-service
+```
+
+Build creates binaries and packages images. Release selects service versions
+and runtime configuration in `.env`. Run starts those images with `--no-build`.
+Treat published version labels as immutable: use a new version for changed code.
+
+To roll auth back, set `AUTH_VERSION=v1` and run the same `up --no-build --no-deps`
+command. Keep the old image locally; if it was removed, package the preserved
+`build/auth/v1/auth` with `docker compose build auth-service` without recompiling.
+
 ## Parser import
 
 The parser is part of booking-service startup, not a separate runtime service.
-It always runs once before booking-service starts serving HTTP. Its import
+It runs when no imported schedule exists in the database. Its import
 window can be controlled with environment variables:
 
 - `PARSER_BASE_URL` — NSU timetable base URL, defaults to `https://table.nsu.ru`.
@@ -77,5 +130,9 @@ import replaces old parser rows, and overlaps with user bookings are skipped
 without deleting user data.
 
 ## Development
+
+`timetable-homework-tgbot` has its own Go module and Compose deployment.
+Its `.env` remains separate from the root application configuration
+and are ignored by Git. Its Telegram credentials are not needed by the main stack.
 
 See CONTRIBUTING.md for workflow and branching rules.

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load("key.env")
+	_ = godotenv.Load()
 
 	ctx := context.Background()
 	db, err := database.NewDB(ctx)
