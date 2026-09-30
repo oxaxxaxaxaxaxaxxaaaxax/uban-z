@@ -5,8 +5,7 @@
   "scripts": {
     "gen:auth": "openapi-typescript ../docx/auth/auth-api.yaml -o types/auth.ts",
     "gen:booking": "openapi-typescript ../docx/booking/booking-api.yaml -o types/booking.ts",
-    "gen:parser": "openapi-typescript ../docx/parser/parser-api.yaml -o types/parser.ts",
-    "gen:api": "npm run gen:auth && npm run gen:booking && npm run gen:parser",
+    "gen:api": "npm run gen:auth && npm run gen:booking",
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",

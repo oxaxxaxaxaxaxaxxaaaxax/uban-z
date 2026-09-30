@@ -104,10 +104,26 @@ window can be controlled with environment variables:
 - `PARSER_WEEKS_AHEAD` — how many weeks of recurring timetable rows to materialize, defaults to `16`.
 - `PARSER_TIMEZONE` — timezone used for concrete schedule dates, defaults to `Asia/Novosibirsk`.
 
+Startup imports use a PostgreSQL advisory lock. Only one booking-service
+instance checks and imports at a time; waiting instances recheck the database
+after acquiring the lock and skip parsing if the schedule already exists.
+The lock is released on completion, failure, or loss of the database connection.
+No additional service or migration is required. Parser status remains local
+to each instance; a waiting instance reports `running` until its check finishes.
+
 Imported lessons are stored in `bookings` as `creator_role=admin` and
 `user_id=0`. On every parser run previous parser rows are replaced; existing
 user-created bookings are preserved. If an imported lesson overlaps an existing
 booking, that lesson is skipped and counted in the import log.
+
+## Shutdown
+
+Auth, booking, and gateway handle SIGTERM/SIGINT, stop accepting connections,
+and wait for active HTTP requests up to `SHUTDOWN_TIMEOUT` (default `5s`).
+After the timeout, remaining connections are closed. Booking also cancels
+and waits for its background import before closing PostgreSQL and RabbitMQ.
+Docker allows `STOP_GRACE_PERIOD` (default `30s`) before forcibly killing
+the process. Keep it longer than `SHUTDOWN_TIMEOUT`, with time for cleanup.
 
 ## Tests
 
@@ -128,6 +144,18 @@ Expected behavior: testcontainers starts a temporary PostgreSQL, goose applies
 booking migrations, parser rows are imported into `rooms`/`bookings`, a second
 import replaces old parser rows, and overlaps with user bookings are skipped
 without deleting user data.
+
+Concurrency and shutdown checks:
+
+```bash
+go test -race ./internal/platform/httpx ./internal/core/parser/service
+go test -tags=integration -race -count=1 -timeout=5m -run 'TestScheduleImportLock' ./internal/adapter/booking/postgres
+```
+
+Expected behavior: six simultaneous startup attempts import only once;
+a failed import releases the lock, and a waiting instance can be canceled.
+HTTP tests verify that an active request finishes during graceful shutdown
+and that a stalled request is disconnected after the shutdown timeout.
 
 ## Development
 

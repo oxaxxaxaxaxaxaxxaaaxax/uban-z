@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -23,17 +24,37 @@ func (f fakeSource) ParseLessonsRoom(_ context.Context, roomURL string) ([]parse
 }
 
 type captureRepo struct {
-	rooms []parserdomain.RoomSelector
-	slots []parserdomain.ScheduleSlot
+	called bool
+	rooms  []parserdomain.RoomSelector
+	slots  []parserdomain.ScheduleSlot
 }
 
 func (r *captureRepo) ReplaceParsedSchedule(_ context.Context, rooms []parserdomain.RoomSelector, slots []parserdomain.ScheduleSlot) (parserdomain.ImportStats, error) {
+	r.called = true
 	r.rooms = append([]parserdomain.RoomSelector(nil), rooms...)
 	r.slots = append([]parserdomain.ScheduleSlot(nil), slots...)
 	return parserdomain.ImportStats{
 		RoomsImported:   len(rooms),
 		LessonsImported: len(slots),
 	}, nil
+}
+
+func TestService_RunCanceledDoesNotReplaceSchedule(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	repo := &captureRepo{}
+	parser, err := service.New(fakeSource{}, repo, service.Config{
+		WeeksAhead: 1, DefaultBuilding: "NSU", DefaultCapacity: 30,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parser.Run(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, want canceled", err)
+	}
+	if repo.called {
+		t.Fatal("canceled import must not replace schedule")
+	}
 }
 
 func TestService_RunExpandsRoomLessons(t *testing.T) {

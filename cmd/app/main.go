@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -19,6 +18,12 @@ import (
 const defaultShutdownTimeout = 5 * time.Second
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	port := env("PORT", "8080")
 	logLevel := env("LOG_LEVEL", "info")
 	shutdownTimeout := durationEnv("SHUTDOWN_TIMEOUT", defaultShutdownTimeout)
@@ -64,26 +69,16 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	go func() {
-		<-ctx.Done()
-
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-		defer cancel()
-
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			logger.Error("gateway shutdown failed", slog.Any("err", err))
-		}
-	}()
-
 	logger.Info("api gateway starting",
 		slog.String("addr", server.Addr),
 		slog.String("auth_service_url", env("AUTH_SERVICE_URL", "http://localhost:8081")),
 		slog.String("booking_service_url", env("BOOKING_SERVICE_URL", "http://localhost:8082")),
 	)
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := httpx.ListenAndServe(ctx, server, shutdownTimeout); err != nil {
 		logger.Error("gateway failed", slog.Any("err", err))
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
 
 func env(key string, fallback string) string {

@@ -32,6 +32,12 @@ import (
 const dbConnectTimeout = 10 * time.Second
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	cfg, err := config.Load()
 	if err != nil {
 		slog.New(slog.NewJSONHandler(os.Stderr, nil)).Error("config load failed", slog.Any("err", err))
@@ -65,7 +71,7 @@ func main() {
 	defer stop()
 
 	importStatus := newImportStatusTracker()
-	startStartupScheduleImport(ctx, cfg, store, logger, importStatus)
+	importDone := startStartupScheduleImport(ctx, cfg, store, logger, importStatus)
 
 	useCase := service.New(store, store, publisher)
 	handler := bookinghttp.NewHandler(useCase, logger)
@@ -87,72 +93,78 @@ func main() {
 		ReadHeaderTimeout: cfg.ShutdownTimeout,
 	}
 
-	go func() {
-		<-ctx.Done()
-
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
-		defer cancel()
-
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			logger.Error("server shutdown failed", slog.Any("err", err))
-		}
-	}()
-
 	logger.Info("booking service starting",
 		slog.String("addr", server.Addr),
 		slog.String("log_level", cfg.LogLevel),
 		slog.Bool("events_enabled", cfg.EventsEnabled),
 	)
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Error("server failed", slog.Any("err", err))
-		os.Exit(1)
+	serverErr := httpx.ListenAndServe(ctx, server, cfg.ShutdownTimeout)
+	if serverErr != nil {
+		logger.Error("server failed", slog.Any("err", serverErr))
 	}
+	stop()
+	<-importDone
+	return serverErr
 }
 
-func startStartupScheduleImport(ctx context.Context, cfg config.Config, store *bookingpostgres.Store, logger *slog.Logger, status *importStatusTracker) {
+func startStartupScheduleImport(ctx context.Context, cfg config.Config, store *bookingpostgres.Store, logger *slog.Logger, status *importStatusTracker) <-chan struct{} {
+	done := make(chan struct{})
 	logger.Info("parser startup import check started")
 	status.markRunning()
 	go func() {
+		defer close(done)
 		startedAt := time.Now()
-		hasSchedule, err := store.HasParsedSchedule(ctx)
-		if err != nil {
-			status.markFailed(err)
-			logger.Error("parser startup import check failed",
-				slog.String("event", "parser.startup_import.check_failed"),
-				slog.Any("err", err),
-				slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
-			)
-			return
-		}
-		if hasSchedule {
-			status.markSkipped("parsed schedule already exists in database")
-			logger.Info("parser startup import skipped",
-				slog.String("event", "parser.startup_import.skipped"),
-				slog.String("action", "Schedule import skipped"),
-				slog.String("actor", "system"),
-				slog.String("details", "Schedule was already loaded, parser did not run"),
-				slog.String("reason", "parsed schedule already exists in database"),
-				slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
-			)
-			return
-		}
+		err := store.WithScheduleImportLock(ctx, func() error {
+			hasSchedule, err := store.HasParsedSchedule(ctx)
+			if err != nil {
+				status.markFailed(err)
+				logger.Error("parser startup import check failed",
+					slog.String("event", "parser.startup_import.check_failed"),
+					slog.Any("err", err),
+					slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
+				)
+				return err
+			}
+			if hasSchedule {
+				status.markSkipped("parsed schedule already exists in database")
+				logger.Info("parser startup import skipped",
+					slog.String("event", "parser.startup_import.skipped"),
+					slog.String("action", "Schedule import skipped"),
+					slog.String("actor", "system"),
+					slog.String("details", "Schedule was already loaded, parser did not run"),
+					slog.String("reason", "parsed schedule already exists in database"),
+					slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
+				)
+				return nil
+			}
 
-		logger.Info("parser startup import started")
-		stats, err := importStartupSchedule(ctx, cfg, store, logger)
+			logger.Info("parser startup import started")
+			stats, err := importStartupSchedule(ctx, cfg, store, logger)
+			if err != nil {
+				status.markFailed(err)
+				logger.Error("parser startup import failed",
+					slog.String("event", "parser.startup_import.failed"),
+					slog.String("action", "Schedule import failed"),
+					slog.String("actor", "system"),
+					slog.String("details", "Parser failed to load NSU schedule: "+err.Error()),
+					slog.Any("err", err),
+					slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
+				)
+				return err
+			}
+			status.markReady(stats)
+			return nil
+		})
 		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				logger.Info("parser startup import canceled")
+				return
+			}
 			status.markFailed(err)
-			logger.Error("parser startup import failed",
-				slog.String("event", "parser.startup_import.failed"),
-				slog.String("action", "Schedule import failed"),
-				slog.String("actor", "system"),
-				slog.String("details", "Parser failed to load NSU schedule: "+err.Error()),
-				slog.Any("err", err),
-				slog.Int64("duration_ms", time.Since(startedAt).Milliseconds()),
-			)
-			return
+			logger.Error("parser startup import stopped", slog.Any("err", err))
 		}
-		status.markReady(stats)
 	}()
+	return done
 }
 
 type importStatusTracker struct {

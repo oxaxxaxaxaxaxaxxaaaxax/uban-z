@@ -58,6 +58,9 @@ func New(source port.Source, repo port.ScheduleRepository, cfg Config) (*Service
 }
 
 func (s *Service) Run(ctx context.Context) (parserdomain.ImportStats, error) {
+	if err := ctx.Err(); err != nil {
+		return parserdomain.ImportStats{}, err
+	}
 	rooms, err := s.source.ParseRooms(ctx)
 	if err != nil {
 		return parserdomain.ImportStats{}, fmt.Errorf("parse rooms: %w", err)
@@ -77,6 +80,9 @@ func (s *Service) Run(ctx context.Context) (parserdomain.ImportStats, error) {
 	slots := make([]parserdomain.ScheduleSlot, 0)
 	stats := parserdomain.ImportStats{RoomsSeen: len(rooms)}
 	for _, room := range rooms {
+		if err := ctx.Err(); err != nil {
+			return parserdomain.ImportStats{}, err
+		}
 		lessons, err := s.source.ParseLessonsRoom(ctx, room.FullURL)
 		if err != nil {
 			return parserdomain.ImportStats{}, fmt.Errorf("parse room %q: %w", room.Name, err)
@@ -84,6 +90,9 @@ func (s *Service) Run(ctx context.Context) (parserdomain.ImportStats, error) {
 		stats.LessonsSeen += len(lessons)
 
 		for _, lesson := range lessons {
+			if err := ctx.Err(); err != nil {
+				return parserdomain.ImportStats{}, err
+			}
 			expanded, err := s.expand(room, lesson)
 			if err != nil {
 				return parserdomain.ImportStats{}, fmt.Errorf("expand lesson %q in room %q: %w", lesson.Subject, room.Name, err)
@@ -93,6 +102,9 @@ func (s *Service) Run(ctx context.Context) (parserdomain.ImportStats, error) {
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		return parserdomain.ImportStats{}, err
+	}
 	importStats, err := s.repo.ReplaceParsedSchedule(ctx, normalizedRooms, slots)
 	if err != nil {
 		return parserdomain.ImportStats{}, fmt.Errorf("replace parsed schedule: %w", err)

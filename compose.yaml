@@ -118,6 +118,7 @@ services:
         condition: service_healthy
 
   auth-service:
+    stop_grace_period: ${STOP_GRACE_PERIOD:-30s}
     build:
       context: .
       dockerfile: cmd/auth_service/Dockerfile
@@ -129,6 +130,7 @@ services:
       PORT: "8080"
       DATABASE_URL: ${AUTH_DATABASE_URL:?required}
       JWT_SECRET: ${JWT_SECRET:?required}
+      SHUTDOWN_TIMEOUT: ${SHUTDOWN_TIMEOUT:-5s}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOGSTASH_ADDR: "logstash:5044"
       SERVICE_NAME: "auth-service"
@@ -139,6 +141,7 @@ services:
         condition: service_completed_successfully
 
   booking-service:
+    stop_grace_period: ${STOP_GRACE_PERIOD:-30s}
     build:
       context: .
       dockerfile: cmd/booking/Dockerfile
@@ -172,6 +175,7 @@ services:
         condition: service_completed_successfully
 
   gateway-api:
+    stop_grace_period: ${STOP_GRACE_PERIOD:-30s}
     build:
       context: .
       dockerfile: cmd/app/Dockerfile

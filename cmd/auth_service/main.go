@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,6 +25,12 @@ import (
 const dbConnectTimeout = 10 * time.Second
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	_ = godotenv.Load()
 
 	secret := os.Getenv("JWT_SECRET")
@@ -48,6 +56,14 @@ func main() {
 	if err != nil {
 		slog.New(slog.NewJSONHandler(os.Stderr, nil)).Error("logger init failed", slog.Any("err", err))
 		os.Exit(1)
+	}
+	shutdownTimeout := 5 * time.Second
+	if value := os.Getenv("SHUTDOWN_TIMEOUT"); value != "" {
+		shutdownTimeout, err = time.ParseDuration(value)
+		if err != nil || shutdownTimeout <= 0 {
+			logger.Error("SHUTDOWN_TIMEOUT must be a positive duration")
+			os.Exit(1)
+		}
 	}
 
 	pool, err := openPostgres(databaseURL)
@@ -83,7 +99,18 @@ func main() {
 		slog.String("addr", ":"+port),
 		slog.String("log_level", logLevel),
 	)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           router,
+		ReadHeaderTimeout: shutdownTimeout,
+	}
+	if err := httpx.ListenAndServe(ctx, server, shutdownTimeout); err != nil {
+		logger.Error("auth server failed", slog.Any("err", err))
+		return err
+	}
+	return nil
 }
 
 func openPostgres(url string) (*pgxpool.Pool, error) {
